@@ -31,21 +31,35 @@ namespace LotusTeam.Controllers
 
         // ================= CÁ NHÂN =================
         [HttpGet("my/{employeeId:int}")]
-        public async Task<IActionResult> MyAttendance(int employeeId)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER,HR_STAFF,EMPLOYEE")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> MyAttendance(int employeeId)
         {
             var data = await _service.GetMyAttendanceAsync(employeeId);
-            return Ok(new { success = true, data });
+
+            return Ok(new ApiResponse<IEnumerable<object>>
+            {
+                Success = true,
+                Message = "Lấy chấm công cá nhân thành công",
+                Data = data
+            });
         }
 
         // ================= PHÒNG BAN =================
         [HttpGet("department/{departmentId:int}")]
-        public async Task<IActionResult> DepartmentAttendance(
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> DepartmentAttendance(
             int departmentId,
             [FromQuery] DateTime from,
             [FromQuery] DateTime to)
         {
             var data = await _service.GetDepartmentAttendanceAsync(departmentId, from, to);
-            return Ok(new { success = true, data });
+
+            return Ok(new ApiResponse<IEnumerable<object>>
+            {
+                Success = true,
+                Message = "Lấy chấm công phòng ban thành công",
+                Data = data
+            });
         }
 
         // ================= CHẤM CÔNG THỦ CÔNG =================
@@ -75,27 +89,39 @@ namespace LotusTeam.Controllers
 
         // ================= XÁC NHẬN CHẤM CÔNG =================
         [HttpPost("confirm")]
-        public async Task<IActionResult> ConfirmAttendance(
-            [FromBody] List<long> ids,
-            [FromServices] AppDbContext context)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<bool>>> ConfirmAttendance(
+    [FromBody] List<long> ids,
+    [FromServices] AppDbContext context)
         {
             var records = await context.Attendances
                 .Where(x => ids.Contains(x.AttendanceID))
                 .ToListAsync();
 
             if (!records.Any())
-                return NotFound(new { success = false, message = "Không có dữ liệu" });
+            {
+                return NotFound(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Không có dữ liệu"
+                });
+            }
 
             foreach (var item in records)
             {
                 item.IsConfirmed = true;
                 item.ConfirmedAt = DateTime.Now;
-                item.ConfirmedBy = 1; // TODO: lấy từ token
+                item.ConfirmedBy = int.Parse(User.FindFirst("sub")!.Value); // ✅ lấy từ token
             }
 
             await context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Đã xác nhận chấm công" });
+            return Ok(new ApiResponse<bool>
+            {
+                Success = true,
+                Message = "Đã xác nhận chấm công",
+                Data = true
+            });
         }
 
         // ================= DANH SÁCH ĐÃ XÁC NHẬN =================
@@ -161,27 +187,32 @@ namespace LotusTeam.Controllers
 
         // ================= ĐIỀU CHỈNH =================
         [HttpPut("adjust/{attendanceId:long}")]
-        public async Task<IActionResult> Adjust(
-            long attendanceId,
-            [FromBody] AdjustAttendanceDto dto)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<bool>>> Adjust(
+    long attendanceId,
+    [FromBody] AdjustAttendanceDto dto)
         {
-            try
-            {
-                var ok = await _service.AdjustAttendanceAsync(
-                    attendanceId,
-                    dto.CheckIn,
-                    dto.CheckOut,
-                    dto.Reason);
+            var ok = await _service.AdjustAttendanceAsync(
+                attendanceId,
+                dto.CheckIn,
+                dto.CheckOut,
+                dto.Reason);
 
-                if (!ok)
-                    return NotFound(new { success = false, message = "Không tìm thấy bản ghi" });
-
-                return Ok(new { success = true, message = "Cập nhật thành công" });
-            }
-            catch (Exception ex)
+            if (!ok)
             {
-                return BadRequest(new { success = false, message = ex.Message });
+                return NotFound(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Không tìm thấy bản ghi"
+                });
             }
+
+            return Ok(new ApiResponse<bool>
+            {
+                Success = true,
+                Message = "Cập nhật thành công",
+                Data = true
+            });
         }
 
         // ================= DANH SÁCH TĂNG CA =================
@@ -269,35 +300,38 @@ namespace LotusTeam.Controllers
         /// Check-in bằng khuôn mặt
         /// </summary>
         [HttpPost("face-checkin")]
-        public async Task<IActionResult> FaceCheckIn([FromBody] FaceCheckDto dto)
+        [Authorize(Roles = "EMPLOYEE")]
+        public async Task<ActionResult<ApiResponse<object>>> FaceCheckIn([FromBody] FaceCheckDto dto)
         {
-            try
+            var canScan = await _remoteService.CanFaceScanAsync(dto.EmployeeId);
+
+            if (!canScan)
             {
-                // Kiểm tra quyền chấm công từ xa
-                var canScan = await _remoteService.CanFaceScanAsync(dto.EmployeeId);
-
-                if (!canScan)
+                return BadRequest(new ApiResponse<object>
                 {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Bạn không được phép chấm công từ xa (chưa được duyệt)"
-                    });
-                }
-
-                var result = await _service.FaceCheckInAsync(dto.EmployeeId, dto.ImageBase64);
-
-                if (!result.Success)
-                {
-                    return BadRequest(new { success = false, message = result.Message, confidence = result.Confidence });
-                }
-
-                return Ok(new { success = true, message = result.Message, confidence = result.Confidence });
+                    Success = false,
+                    Message = "Bạn không được phép chấm công từ xa"
+                });
             }
-            catch (Exception ex)
+
+            var result = await _service.FaceCheckInAsync(dto.EmployeeId, dto.ImageBase64);
+
+            if (!result.Success)
             {
-                return BadRequest(new { success = false, message = ex.Message });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = result.Message,
+                    Data = new { result.Confidence }
+                });
             }
+
+            return Ok(new ApiResponse<object>
+            {
+                Success = true,
+                Message = result.Message,
+                Data = new { result.Confidence }
+            });
         }
 
         /// <summary>

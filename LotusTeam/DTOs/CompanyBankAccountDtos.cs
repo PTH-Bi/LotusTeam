@@ -24,4 +24,12 @@
 
         public string? Branch { get; set; }
     }
+
+    public class UpdateCompanyBankAccountDto
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public string? Branch { get; set; }
+        public bool IsDefault { get; set; }
+    }
 }

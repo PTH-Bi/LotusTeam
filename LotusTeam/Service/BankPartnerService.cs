@@ -68,5 +68,60 @@ namespace LotusTeam.Service
                 BankName = bank.BankName
             };
         }
+
+        public async Task<BankPartnerDto?> UpdateAsync(int id, UpdateBankPartnerDto dto)
+        {
+            var bank = await _context.BankPartners.FindAsync(id);
+
+            if (bank == null)
+                return null;
+
+            // check trùng BankCode
+            var isDuplicate = await _context.BankPartners
+                .AnyAsync(x => x.BankCode == dto.BankCode && x.BankPartnerID != id);
+
+            if (isDuplicate)
+                throw new Exception("Mã ngân hàng đã tồn tại");
+
+            bank.BankCode = dto.BankCode;
+            bank.BankName = dto.BankName;
+            bank.ShortName = dto.ShortName;
+            bank.SwiftCode = dto.SwiftCode;
+            bank.IsActive = dto.IsActive;
+
+            await _context.SaveChangesAsync();
+
+            return new BankPartnerDto
+            {
+                BankPartnerID = bank.BankPartnerID,
+                BankCode = bank.BankCode,
+                BankName = bank.BankName,
+                ShortName = bank.ShortName,
+                SwiftCode = bank.SwiftCode,
+                IsActive = bank.IsActive
+            };
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var bank = await _context.BankPartners.FindAsync(id);
+
+            if (bank == null)
+                return false;
+
+            // ❗ Check đang được dùng không
+            var isUsed = await _context.CompanyBankAccounts
+                .AnyAsync(x => x.BankPartnerID == id);
+
+            if (isUsed)
+                throw new Exception("Ngân hàng đang được sử dụng, không thể xóa");
+
+            // ✅ Soft delete
+            bank.IsActive = false;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
     }
 }

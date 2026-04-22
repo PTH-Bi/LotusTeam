@@ -5,6 +5,7 @@ using LotusTeam.DTOs;
 using LotusTeam.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace LotusTeam.API.Controllers
 {
@@ -729,5 +730,6 @@ namespace LotusTeam.API.Controllers
         public T? Data { get; set; }
         public string Message { get; set; } = string.Empty;
         public PaginationInfo Pagination { get; internal set; }
+        public ModelStateDictionary Errors { get; internal set; }
     }
 }

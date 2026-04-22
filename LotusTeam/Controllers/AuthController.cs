@@ -38,82 +38,72 @@ namespace LotusTeam.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<LoginResponseDto>>> Login(LoginDto dto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                var user = await _context.Users
-                    .Include(u => u.UserRoles)
-                        .ThenInclude(ur => ur.Role)
-                            .ThenInclude(r => r.RolePermissions)
-                                .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(u =>
-                        u.Username == dto.Username &&
-                        u.IsActive);
-
-                if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
+                return BadRequest(new ApiResponse<object>
                 {
-                    return Unauthorized(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Tên đăng nhập hoặc mật khẩu không đúng"
-                    });
-                }
-
-                user.LastLogin = DateTime.Now;
-
-                // ===== TOKEN =====
-                var token = GenerateJwtToken(user);
-                var refreshToken = GenerateRefreshToken();
-
-                // lưu DB
-                _context.RefreshTokens.Add(new RefreshTokens
-                {
-                    UserId = user.UserID,
-                    Token = refreshToken,
-                    ExpiryDate = DateTime.Now.AddDays(7),
-                    IsRevoked = false
+                    Success = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Errors = ModelState
                 });
+            }
 
-                await _context.SaveChangesAsync();
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                        .ThenInclude(r => r.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
+                .FirstOrDefaultAsync(u =>
+                    u.Username == dto.Username &&
+                    u.IsActive);
 
-                var roles = user.UserRoles
-                    .Select(ur => ur.Role.RoleCode)
-                    .Distinct()
-                    .ToList();
+            if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
+            {
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Tên đăng nhập hoặc mật khẩu không đúng"
+                });
+            }
 
-                var permissions = user.UserRoles
-                    .SelectMany(ur => ur.Role.RolePermissions)
-                    .Select(rp => rp.Permission.PermissionCode)
-                    .Distinct()
-                    .ToList();
+            user.LastLogin = DateTime.Now;
 
-                var response = new LoginResponseDto
+            var token = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshToken();
+
+            _context.RefreshTokens.Add(new RefreshTokens
+            {
+                UserId = user.UserID,
+                Token = refreshToken,
+                ExpiryDate = DateTime.Now.AddDays(7),
+                IsRevoked = false
+            });
+
+            await _context.SaveChangesAsync();
+
+            var roles = user.UserRoles.Select(ur => ur.Role.RoleCode).Distinct().ToList();
+            var permissions = user.UserRoles
+                .SelectMany(ur => ur.Role.RolePermissions)
+                .Select(rp => rp.Permission.PermissionCode)
+                .Distinct()
+                .ToList();
+
+            return Ok(new ApiResponse<LoginResponseDto>
+            {
+                Success = true,
+                Message = "Đăng nhập thành công",
+                Data = new LoginResponseDto
                 {
                     UserId = user.UserID,
                     Username = user.Username,
-                    FullName = "Administrator",
-                    Email = null,
+                    FullName = user.Employee?.FullName ?? user.Username, // ✅ FIX
+                    Email = user.Employee?.Email,
                     Token = token,
-                    RefreshToken = refreshToken, // 🔥 thêm
+                    RefreshToken = refreshToken,
                     Roles = roles,
                     Permissions = permissions
-                };
-
-                return Ok(new ApiResponse<LoginResponseDto>
-                {
-                    Success = true,
-                    Data = response,
-                    Message = "Đăng nhập thành công"
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Login error");
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Lỗi hệ thống khi đăng nhập"
-                });
-            }
+                }
+            });
         }
 
         // ========================= REFRESH TOKEN =========================
@@ -137,6 +127,16 @@ namespace LotusTeam.API.Controllers
                     {
                         Success = false,
                         Message = "Refresh token không hợp lệ"
+                    });
+                }
+
+                // ✅ FIX thêm
+                if (storedToken.User == null || !storedToken.User.IsActive)
+                {
+                    return Unauthorized(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "User không hợp lệ"
                     });
                 }
 
@@ -199,7 +199,7 @@ namespace LotusTeam.API.Controllers
 
         // ========================= LOGOUT =========================
         [HttpPost("logout")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<ActionResult<ApiResponse<object>>> Logout([FromBody] RefreshRequest request)
         {
             var token = await _context.RefreshTokens
@@ -221,10 +221,9 @@ namespace LotusTeam.API.Controllers
         // ========================= CHANGE PASSWORD =========================
         [HttpPost("change-password")]
         [Authorize]
-        [HasPermission("AUTH_CHANGE_PASSWORD")]
         public async Task<ActionResult<ApiResponse<object>>> ChangePassword(ChangePasswordDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = GetUserId(); // ✅ dùng helper
 
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
@@ -246,6 +245,17 @@ namespace LotusTeam.API.Controllers
             }
 
             user.PasswordHash = HashPassword(dto.NewPassword);
+
+            // ✅ revoke tất cả refresh token
+            var tokens = await _context.RefreshTokens
+                .Where(x => x.UserId == userId && !x.IsRevoked)
+                .ToListAsync();
+
+            foreach (var t in tokens)
+            {
+                t.IsRevoked = true;
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new ApiResponse<object>
@@ -258,10 +268,9 @@ namespace LotusTeam.API.Controllers
         // ========================= PROFILE =========================
         [HttpGet("profile")]
         [Authorize]
-        [HasPermission("AUTH_PROFILE_VIEW")]
         public async Task<ActionResult<ApiResponse<UserProfileDto>>> GetProfile()
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = GetUserId(); // ✅ FIX
 
             var user = await _context.Users
                 .Include(u => u.Employee)
@@ -281,25 +290,23 @@ namespace LotusTeam.API.Controllers
                 });
             }
 
-            var profile = new UserProfileDto
-            {
-                UserId = user.UserID,
-                Username = user.Username,
-                FullName = user.Employee?.FullName ?? "Administrator",
-                Email = user.Employee?.Email,
-                EmployeeCode = user.Employee?.EmployeeCode,
-                Phone = user.Employee?.Phone,
-                DepartmentName = user.Employee?.Department?.DepartmentName,
-                PositionName = user.Employee?.Position?.PositionName,
-                Roles = user.UserRoles.Select(r => r.Role.RoleName).ToList(),
-                LastLogin = user.LastLogin,
-                IsActive = user.IsActive
-            };
-
             return Ok(new ApiResponse<UserProfileDto>
             {
                 Success = true,
-                Data = profile
+                Data = new UserProfileDto
+                {
+                    UserId = user.UserID,
+                    Username = user.Username,
+                    FullName = user.Employee?.FullName ?? user.Username,
+                    Email = user.Employee?.Email,
+                    EmployeeCode = user.Employee?.EmployeeCode,
+                    Phone = user.Employee?.Phone,
+                    DepartmentName = user.Employee?.Department?.DepartmentName,
+                    PositionName = user.Employee?.Position?.PositionName,
+                    Roles = user.UserRoles.Select(r => r.Role.RoleName).ToList(),
+                    LastLogin = user.LastLogin,
+                    IsActive = user.IsActive
+                }
             });
         }
 
@@ -337,12 +344,12 @@ namespace LotusTeam.API.Controllers
         private string GenerateJwtToken(User user)
         {
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("FullName", "Administrator")
-            };
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, user.UserID.ToString()), // ✅ FIX
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        new Claim("FullName", user.Employee?.FullName ?? user.Username) // ✅ FIX
+    };
 
             foreach (var role in user.UserRoles.Select(r => r.Role.RoleCode))
             {
@@ -364,16 +371,22 @@ namespace LotusTeam.API.Controllers
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            var expiry = Convert.ToDouble(_configuration["JwtSettings:ExpiryInMinutes"] ?? "60"); // ✅ FIX
+
             var token = new JwtSecurityToken(
                 issuer: _configuration["JwtSettings:Issuer"],
                 audience: _configuration["JwtSettings:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(
-                    Convert.ToDouble(_configuration["JwtSettings:ExpiryInMinutes"])),
+                expires: DateTime.Now.AddMinutes(expiry),
                 signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private int GetUserId()
+        {
+            return int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
         }
 
         private string GenerateRefreshToken()
@@ -431,9 +444,18 @@ namespace LotusTeam.API.Controllers
 
     public class ChangePasswordDto
     {
-        [Required] public string OldPassword { get; set; } = string.Empty;
-        [Required, MinLength(6)] public string NewPassword { get; set; } = string.Empty;
-        [Required, Compare("NewPassword")] public string ConfirmPassword { get; set; } = string.Empty;
+        [Required]
+        public string OldPassword { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(8)]
+        [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d).+$",
+            ErrorMessage = "Mật khẩu phải có chữ và số")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required]
+        [Compare("NewPassword")]
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 
     public class UserProfileDto
