@@ -10,9 +10,12 @@ using LotusTeam.Service;
 
 namespace LotusTeam.API.Controllers
 {
+    /// <summary>
+    /// API quản lý hợp đồng và phúc lợi nhân viên
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "ADMIN,HR")]
+    [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER,HR_STAFF")]
     public class ContractsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -31,6 +34,12 @@ namespace LotusTeam.API.Controllers
 
         #region Contract Management
 
+        /// <summary>
+        /// Lấy danh sách hợp đồng (có phân trang, lọc, tìm kiếm)
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER, HR_STAFF
+        /// </remarks>
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ContractDto>>>> GetContracts(
             [FromQuery] int page = 1,
@@ -54,24 +63,17 @@ namespace LotusTeam.API.Controllers
                     .Include(c => c.ContractType)
                     .AsQueryable();
 
-                // Apply filters
                 if (!string.IsNullOrEmpty(search))
-                {
                     query = query.Where(c =>
                         c.ContractCode.Contains(search) ||
                         c.Employee.FullName.Contains(search) ||
                         c.Employee.EmployeeCode.Contains(search));
-                }
 
                 if (employeeId.HasValue)
-                {
                     query = query.Where(c => c.EmployeeID == employeeId);
-                }
 
                 if (contractTypeId.HasValue)
-                {
                     query = query.Where(c => c.ContractTypeID == contractTypeId);
-                }
 
                 if (!string.IsNullOrEmpty(status))
                 {
@@ -91,29 +93,19 @@ namespace LotusTeam.API.Controllers
                 }
 
                 if (startDateFrom.HasValue)
-                {
                     query = query.Where(c => c.StartDate >= startDateFrom);
-                }
 
                 if (startDateTo.HasValue)
-                {
                     query = query.Where(c => c.StartDate <= startDateTo);
-                }
 
                 if (endDateFrom.HasValue)
-                {
                     query = query.Where(c => c.EndDate >= endDateFrom);
-                }
 
                 if (endDateTo.HasValue)
-                {
                     query = query.Where(c => c.EndDate <= endDateTo);
-                }
 
-                // Get total count
                 var totalCount = await query.CountAsync();
 
-                // Apply pagination
                 var contracts = await query
                     .OrderByDescending(c => c.ContractID)
                     .Skip((page - 1) * pageSize)
@@ -127,8 +119,8 @@ namespace LotusTeam.API.Controllers
                     EmployeeId = c.EmployeeID,
                     EmployeeCode = c.Employee.EmployeeCode,
                     EmployeeName = c.Employee.FullName,
-                    DepartmentName = c.Employee.Department != null ? c.Employee.Department.DepartmentName : "",
-                    PositionName = c.Employee.Position != null ? c.Employee.Position.PositionName : "",
+                    DepartmentName = c.Employee.Department?.DepartmentName ?? "",
+                    PositionName = c.Employee.Position?.PositionName ?? "",
                     ContractTypeId = c.ContractTypeID,
                     ContractTypeName = c.ContractType.ContractTypeName,
                     ContractTypeCode = c.ContractType.ContractTypeCode,
@@ -139,7 +131,7 @@ namespace LotusTeam.API.Controllers
                     Status = GetContractStatus(c)
                 }).ToList();
 
-                var response = new ApiResponse<IEnumerable<ContractDto>>
+                return Ok(new ApiResponse<IEnumerable<ContractDto>>
                 {
                     Success = true,
                     Data = contractDtos,
@@ -150,9 +142,7 @@ namespace LotusTeam.API.Controllers
                         PageSize = pageSize,
                         TotalCount = totalCount
                     }
-                };
-
-                return Ok(response);
+                });
             }
             catch (Exception ex)
             {
@@ -165,6 +155,12 @@ namespace LotusTeam.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy chi tiết hợp đồng theo ID
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER, HR_STAFF
+        /// </remarks>
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<ContractDetailDto>>> GetContract(int id)
         {
@@ -179,15 +175,8 @@ namespace LotusTeam.API.Controllers
                     .FirstOrDefaultAsync(c => c.ContractID == id);
 
                 if (contract == null)
-                {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Hợp đồng với ID {id} không tồn tại"
-                    });
-                }
+                    return NotFound(new ApiResponse<object> { Success = false, Message = $"Hợp đồng với ID {id} không tồn tại" });
 
-                // Get benefits for this employee (not contract, since Benefit model references EmployeeID)
                 var benefits = await _context.Benefits
                     .Where(b => b.EmployeeID == contract.EmployeeID)
                     .Select(b => new BenefitDto
@@ -210,10 +199,8 @@ namespace LotusTeam.API.Controllers
                     EmployeeId = contract.EmployeeID,
                     EmployeeCode = contract.Employee.EmployeeCode,
                     EmployeeName = contract.Employee.FullName,
-                    DepartmentName = contract.Employee.Department != null ?
-                        contract.Employee.Department.DepartmentName : "",
-                    PositionName = contract.Employee.Position != null ?
-                        contract.Employee.Position.PositionName : "",
+                    DepartmentName = contract.Employee.Department?.DepartmentName ?? "",
+                    PositionName = contract.Employee.Position?.PositionName ?? "",
                     ContractTypeId = contract.ContractTypeID,
                     ContractTypeName = contract.ContractType.ContractTypeName,
                     ContractTypeCode = contract.ContractType.ContractTypeCode,
@@ -226,52 +213,35 @@ namespace LotusTeam.API.Controllers
                     Benefits = benefits
                 };
 
-                return Ok(new ApiResponse<ContractDetailDto>
-                {
-                    Success = true,
-                    Data = contractDetail,
-                    Message = "Thông tin chi tiết hợp đồng"
-                });
+                return Ok(new ApiResponse<ContractDetailDto> { Success = true, Data = contractDetail, Message = "Thông tin chi tiết hợp đồng" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving contract with ID {Id}", id);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi lấy thông tin hợp đồng"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi lấy thông tin hợp đồng" });
             }
         }
 
+        /// <summary>
+        /// Tạo hợp đồng mới cho nhân viên
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER, HR_STAFF
+        /// </remarks>
         [HttpPost]
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
         public async Task<ActionResult<ApiResponse<ContractDetailDto>>> CreateContract(CreateContractDto createDto)
         {
             try
             {
-                // Validate employee
                 var employee = await _context.Employees.FindAsync(createDto.EmployeeId);
                 if (employee == null)
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Nhân viên không tồn tại"
-                    });
-                }
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Nhân viên không tồn tại" });
 
-                // Validate contract type
                 var contractType = await _context.ContractTypes.FindAsync(createDto.ContractTypeId);
                 if (contractType == null)
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Loại hợp đồng không tồn tại"
-                    });
-                }
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Loại hợp đồng không tồn tại" });
 
-                // Check for overlapping contracts
                 var overlappingContract = await _context.Contracts
                     .Where(c => c.EmployeeID == createDto.EmployeeId &&
                                ((c.StartDate <= createDto.StartDate && (c.EndDate == null || c.EndDate >= createDto.StartDate)) ||
@@ -280,22 +250,11 @@ namespace LotusTeam.API.Controllers
                     .FirstOrDefaultAsync();
 
                 if (overlappingContract != null)
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Nhân viên đã có hợp đồng hiệu lực từ {overlappingContract.StartDate:dd/MM/yyyy}" +
-                                 $"{(overlappingContract.EndDate.HasValue ? $" đến {overlappingContract.EndDate:dd/MM/yyyy}" : "")}"
-                    });
-                }
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = $"Nhân viên đã có hợp đồng hiệu lực từ {overlappingContract.StartDate:dd/MM/yyyy}{(overlappingContract.EndDate.HasValue ? $" đến {overlappingContract.EndDate:dd/MM/yyyy}" : "")}" });
 
-                // Generate contract code
-                var contractCode = GenerateContractCode();
-
-                // Create contract
                 var contract = new Contract
                 {
-                    ContractCode = contractCode,
+                    ContractCode = GenerateContractCode(),
                     EmployeeID = createDto.EmployeeId,
                     ContractTypeID = createDto.ContractTypeId,
                     StartDate = createDto.StartDate,
@@ -312,104 +271,69 @@ namespace LotusTeam.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating contract");
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi tạo hợp đồng"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi tạo hợp đồng" });
             }
         }
 
+        /// <summary>
+        /// Cập nhật thông tin hợp đồng
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER
+        /// </remarks>
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<ContractDetailDto>>> UpdateContract(
-            int id, UpdateContractDto updateDto)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<ContractDetailDto>>> UpdateContract(int id, UpdateContractDto updateDto)
         {
             try
             {
                 var contract = await _context.Contracts.FindAsync(id);
-
                 if (contract == null)
-                {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Hợp đồng với ID {id} không tồn tại"
-                    });
-                }
+                    return NotFound(new ApiResponse<object> { Success = false, Message = $"Hợp đồng với ID {id} không tồn tại" });
 
-                // Check if contract type needs update
                 if (updateDto.ContractTypeId.HasValue)
                 {
                     var contractType = await _context.ContractTypes.FindAsync(updateDto.ContractTypeId.Value);
                     if (contractType == null)
-                    {
-                        return BadRequest(new ApiResponse<object>
-                        {
-                            Success = false,
-                            Message = "Loại hợp đồng không tồn tại"
-                        });
-                    }
+                        return BadRequest(new ApiResponse<object> { Success = false, Message = "Loại hợp đồng không tồn tại" });
                     contract.ContractTypeID = updateDto.ContractTypeId.Value;
                 }
 
-                // Update properties
-                if (updateDto.StartDate.HasValue)
-                    contract.StartDate = updateDto.StartDate.Value;
-
-                if (updateDto.EndDate.HasValue)
-                    contract.EndDate = updateDto.EndDate;
-
-                if (updateDto.SignedDate.HasValue)
-                    contract.SignedDate = updateDto.SignedDate.Value;
-
-                if (updateDto.Salary.HasValue)
-                    contract.Salary = updateDto.Salary.Value;
+                if (updateDto.StartDate.HasValue) contract.StartDate = updateDto.StartDate.Value;
+                if (updateDto.EndDate.HasValue) contract.EndDate = updateDto.EndDate;
+                if (updateDto.SignedDate.HasValue) contract.SignedDate = updateDto.SignedDate.Value;
+                if (updateDto.Salary.HasValue) contract.Salary = updateDto.Salary.Value;
 
                 await _context.SaveChangesAsync();
-
                 return await GetContract(id);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating contract with ID {Id}", id);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi cập nhật hợp đồng"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi cập nhật hợp đồng" });
             }
         }
 
+        /// <summary>
+        /// Gia hạn hợp đồng
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER
+        /// </remarks>
         [HttpPut("{id}/extend")]
-        public async Task<ActionResult<ApiResponse<ContractDetailDto>>> ExtendContract(
-            int id, ExtendContractDto extendDto)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<ContractDetailDto>>> ExtendContract(int id, ExtendContractDto extendDto)
         {
             try
             {
                 var contract = await _context.Contracts.FindAsync(id);
-
                 if (contract == null)
-                {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Hợp đồng với ID {id} không tồn tại"
-                    });
-                }
+                    return NotFound(new ApiResponse<object> { Success = false, Message = $"Hợp đồng với ID {id} không tồn tại" });
 
-                // Check if contract is expired
                 if (contract.EndDate.HasValue && contract.EndDate.Value < DateTime.Today)
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Không thể gia hạn hợp đồng đã hết hạn"
-                    });
-                }
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Không thể gia hạn hợp đồng đã hết hạn" });
 
-                // Extend contract
                 contract.EndDate = extendDto.NewEndDate;
-
                 await _context.SaveChangesAsync();
 
                 return await GetContract(id);
@@ -417,11 +341,7 @@ namespace LotusTeam.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error extending contract with ID {Id}", id);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi gia hạn hợp đồng"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi gia hạn hợp đồng" });
             }
         }
 
@@ -429,6 +349,12 @@ namespace LotusTeam.API.Controllers
 
         #region Benefits Management
 
+        /// <summary>
+        /// Lấy danh sách phúc lợi của nhân viên
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER, HR_STAFF
+        /// </remarks>
         [HttpGet("employee/{employeeId}/benefits")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BenefitDto>>>> GetEmployeeBenefits(int employeeId)
         {
@@ -450,39 +376,30 @@ namespace LotusTeam.API.Controllers
                     })
                     .ToListAsync();
 
-                return Ok(new ApiResponse<IEnumerable<BenefitDto>>
-                {
-                    Success = true,
-                    Data = benefits,
-                    Message = "Danh sách phúc lợi nhân viên"
-                });
+                return Ok(new ApiResponse<IEnumerable<BenefitDto>> { Success = true, Data = benefits, Message = "Danh sách phúc lợi nhân viên" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving benefits for employee with ID {EmployeeId}", employeeId);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi lấy danh sách phúc lợi"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi lấy danh sách phúc lợi" });
             }
         }
 
+        /// <summary>
+        /// Thêm phúc lợi cho nhân viên
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER, HR_STAFF
+        /// </remarks>
         [HttpPost("employee/{employeeId}/benefits")]
-        public async Task<ActionResult<ApiResponse<BenefitDto>>> AddBenefit(
-            int employeeId, CreateBenefitDto createDto)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<BenefitDto>>> AddBenefit(int employeeId, CreateBenefitDto createDto)
         {
             try
             {
                 var employee = await _context.Employees.FindAsync(employeeId);
                 if (employee == null)
-                {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Nhân viên với ID {employeeId} không tồn tại"
-                    });
-                }
+                    return NotFound(new ApiResponse<object> { Success = false, Message = $"Nhân viên với ID {employeeId} không tồn tại" });
 
                 var benefit = new Benefit
                 {
@@ -511,41 +428,31 @@ namespace LotusTeam.API.Controllers
                     EmployeeContribution = benefit.EmployeeContribution
                 };
 
-                return Ok(new ApiResponse<BenefitDto>
-                {
-                    Success = true,
-                    Data = benefitDto,
-                    Message = "Thêm phúc lợi thành công"
-                });
+                return Ok(new ApiResponse<BenefitDto> { Success = true, Data = benefitDto, Message = "Thêm phúc lợi thành công" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding benefit for employee with ID {EmployeeId}", employeeId);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi thêm phúc lợi"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi thêm phúc lợi" });
             }
         }
 
+        /// <summary>
+        /// Cập nhật phúc lợi
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER
+        /// </remarks>
         [HttpPut("benefits/{benefitId}")]
-        public async Task<ActionResult<ApiResponse<BenefitDto>>> UpdateBenefit(
-            int benefitId, UpdateBenefitDto updateDto)
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<BenefitDto>>> UpdateBenefit(int benefitId, UpdateBenefitDto updateDto)
         {
             try
             {
                 var benefit = await _context.Benefits.FindAsync(benefitId);
                 if (benefit == null)
-                {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Phúc lợi với ID {benefitId} không tồn tại"
-                    });
-                }
+                    return NotFound(new ApiResponse<object> { Success = false, Message = $"Phúc lợi với ID {benefitId} không tồn tại" });
 
-                // Update properties
                 if (!string.IsNullOrEmpty(updateDto.InsuranceType))
                     benefit.InsuranceType = updateDto.InsuranceType;
 
@@ -581,56 +488,40 @@ namespace LotusTeam.API.Controllers
                     EmployeeContribution = benefit.EmployeeContribution
                 };
 
-                return Ok(new ApiResponse<BenefitDto>
-                {
-                    Success = true,
-                    Data = benefitDto,
-                    Message = "Cập nhật phúc lợi thành công"
-                });
+                return Ok(new ApiResponse<BenefitDto> { Success = true, Data = benefitDto, Message = "Cập nhật phúc lợi thành công" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating benefit with ID {BenefitId}", benefitId);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi cập nhật phúc lợi"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi cập nhật phúc lợi" });
             }
         }
 
+        /// <summary>
+        /// Xóa phúc lợi
+        /// </summary>
+        /// <remarks>
+        /// Role truy cập: SUPER_ADMIN, ADMIN, HR_MANAGER
+        /// </remarks>
         [HttpDelete("benefits/{benefitId}")]
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
         public async Task<ActionResult<ApiResponse<object>>> DeleteBenefit(int benefitId)
         {
             try
             {
                 var benefit = await _context.Benefits.FindAsync(benefitId);
                 if (benefit == null)
-                {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = $"Phúc lợi với ID {benefitId} không tồn tại"
-                    });
-                }
+                    return NotFound(new ApiResponse<object> { Success = false, Message = $"Phúc lợi với ID {benefitId} không tồn tại" });
 
                 _context.Benefits.Remove(benefit);
                 await _context.SaveChangesAsync();
 
-                return Ok(new ApiResponse<object>
-                {
-                    Success = true,
-                    Message = "Xóa phúc lợi thành công"
-                });
+                return Ok(new ApiResponse<object> { Success = true, Message = "Xóa phúc lợi thành công" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting benefit with ID {BenefitId}", benefitId);
-                return StatusCode(500, new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Đã xảy ra lỗi khi xóa phúc lợi"
-                });
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Đã xảy ra lỗi khi xóa phúc lợi" });
             }
         }
 
@@ -641,19 +532,12 @@ namespace LotusTeam.API.Controllers
         private string GetContractStatus(Contract contract)
         {
             var today = DateTime.Today;
-
-            if (contract.StartDate > today)
-                return "Sắp hiệu lực";
-
+            if (contract.StartDate > today) return "Sắp hiệu lực";
             if (contract.EndDate.HasValue)
             {
-                if (contract.EndDate.Value < today)
-                    return "Đã hết hạn";
-
-                if (contract.EndDate.Value.AddMonths(-1) <= today)
-                    return "Sắp hết hạn";
+                if (contract.EndDate.Value < today) return "Đã hết hạn";
+                if (contract.EndDate.Value.AddMonths(-1) <= today) return "Sắp hết hạn";
             }
-
             return "Đang hiệu lực";
         }
 
@@ -667,11 +551,7 @@ namespace LotusTeam.API.Controllers
         private int? GetCurrentUserId()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userId, out int id))
-            {
-                return id;
-            }
-            return null;
+            return int.TryParse(userId, out int id) ? id : null;
         }
 
         #endregion
@@ -679,6 +559,9 @@ namespace LotusTeam.API.Controllers
 
     #region DTO Classes
 
+    /// <summary>
+    /// DTO danh sách hợp đồng
+    /// </summary>
     public class ContractDto
     {
         public int ContractId { get; set; }
@@ -698,31 +581,31 @@ namespace LotusTeam.API.Controllers
         public string Status { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// DTO chi tiết hợp đồng (kèm phúc lợi)
+    /// </summary>
     public class ContractDetailDto : ContractDto
     {
         public bool IsIndefinite { get; set; }
         public List<BenefitDto> Benefits { get; set; } = new();
     }
 
+    /// <summary>
+    /// DTO tạo hợp đồng mới
+    /// </summary>
     public class CreateContractDto
     {
-        [Required]
-        public int EmployeeId { get; set; }
-
-        [Required]
-        public int ContractTypeId { get; set; }
-
-        [Required]
-        public DateTime StartDate { get; set; }
-
+        [Required] public int EmployeeId { get; set; }
+        [Required] public int ContractTypeId { get; set; }
+        [Required] public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public DateTime? SignedDate { get; set; }
-
-        [Required]
-        [Range(0, double.MaxValue)]
-        public decimal Salary { get; set; }
+        [Required][Range(0, double.MaxValue)] public decimal Salary { get; set; }
     }
 
+    /// <summary>
+    /// DTO cập nhật hợp đồng
+    /// </summary>
     public class UpdateContractDto
     {
         public int? ContractTypeId { get; set; }
@@ -732,74 +615,55 @@ namespace LotusTeam.API.Controllers
         public decimal? Salary { get; set; }
     }
 
+    /// <summary>
+    /// DTO gia hạn hợp đồng
+    /// </summary>
     public class ExtendContractDto
     {
-        [Required]
-        public DateTime NewEndDate { get; set; }
+        [Required] public DateTime NewEndDate { get; set; }
     }
 
+    /// <summary>
+    /// DTO phúc lợi
+    /// </summary>
     public class BenefitDto
     {
         public int BenefitId { get; set; }
-
-        [Required]
-        [StringLength(50)]
-        public string InsuranceType { get; set; } = string.Empty; // SOCIAL, HEALTH, UNEMPLOYMENT, etc.
-
+        [Required][StringLength(50)] public string InsuranceType { get; set; } = string.Empty;
         public string? InsuranceNumber { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-
-        [Range(0, 100)]
-        public decimal? ContributionRate { get; set; }
-
-        [Range(0, double.MaxValue)]
-        public decimal? CompanyContribution { get; set; }
-
-        [Range(0, double.MaxValue)]
-        public decimal? EmployeeContribution { get; set; }
+        [Range(0, 100)] public decimal? ContributionRate { get; set; }
+        [Range(0, double.MaxValue)] public decimal? CompanyContribution { get; set; }
+        [Range(0, double.MaxValue)] public decimal? EmployeeContribution { get; set; }
     }
 
+    /// <summary>
+    /// DTO tạo phúc lợi mới
+    /// </summary>
     public class CreateBenefitDto
     {
-        [Required]
-        [StringLength(50)]
-        public string InsuranceType { get; set; } = string.Empty;
-
+        [Required][StringLength(50)] public string InsuranceType { get; set; } = string.Empty;
         public string? InsuranceNumber { get; set; }
-
-        [Required]
-        public DateTime StartDate { get; set; }
-
+        [Required] public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-
-        [Range(0, 100)]
-        public decimal? ContributionRate { get; set; }
-
-        [Range(0, double.MaxValue)]
-        public decimal? CompanyContribution { get; set; }
-
-        [Range(0, double.MaxValue)]
-        public decimal? EmployeeContribution { get; set; }
+        [Range(0, 100)] public decimal? ContributionRate { get; set; }
+        [Range(0, double.MaxValue)] public decimal? CompanyContribution { get; set; }
+        [Range(0, double.MaxValue)] public decimal? EmployeeContribution { get; set; }
     }
 
+    /// <summary>
+    /// DTO cập nhật phúc lợi
+    /// </summary>
     public class UpdateBenefitDto
     {
-        [StringLength(50)]
-        public string? InsuranceType { get; set; }
-
+        [StringLength(50)] public string? InsuranceType { get; set; }
         public string? InsuranceNumber { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-
-        [Range(0, 100)]
-        public decimal? ContributionRate { get; set; }
-
-        [Range(0, double.MaxValue)]
-        public decimal? CompanyContribution { get; set; }
-
-        [Range(0, double.MaxValue)]
-        public decimal? EmployeeContribution { get; set; }
+        [Range(0, 100)] public decimal? ContributionRate { get; set; }
+        [Range(0, double.MaxValue)] public decimal? CompanyContribution { get; set; }
+        [Range(0, double.MaxValue)] public decimal? EmployeeContribution { get; set; }
     }
 
     #endregion

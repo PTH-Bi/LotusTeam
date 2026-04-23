@@ -31,7 +31,6 @@ namespace LotusTeam.Data
         public DbSet<RefreshTokens> RefreshTokens { get; set; }
 
         public DbSet<ChatLogs> ChatLogs { get; set; }
-
         public DbSet<FaceAttendances> FaceAttendances { get; set; }
 
         public DbSet<EmployeeFaces> EmployeeFaces { get; set; }

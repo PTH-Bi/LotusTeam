@@ -43,5 +43,7 @@ namespace LotusTeam.Models
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedDate { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 }

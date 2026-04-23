@@ -11,4 +11,5 @@ namespace LotusTeam.DTOs
 
         public object? Errors { get; set; }
     }
+
 }

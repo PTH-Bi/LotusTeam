@@ -1,4 +1,5 @@
 ﻿using LotusTeam.Data;
+using LotusTeam.DTOs;
 using LotusTeam.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,52 +14,124 @@ namespace LotusTeam.Service
             _context = context;
         }
 
-        public async Task<List<CompanyInfo>> GetAllAsync()
+        // ================= GET ALL =================
+        public async Task<List<CompanyInfoDto>> GetAllAsync()
         {
             return await _context.CompanyInfos
                 .OrderByDescending(x => x.CreatedDate)
+                .Select(x => new CompanyInfoDto
+                {
+                    CompanyID = x.CompanyID,
+                    CompanyCode = x.CompanyCode,
+                    CompanyName = x.CompanyName,
+                    TaxCode = x.TaxCode,
+                    Email = x.Email,
+                    Phone = x.Phone,
+                    Address = x.Address,
+                    BankAccount = x.BankAccount,
+                    BankName = x.BankName,
+                    BankBranch = x.BankBranch,
+                    Representative = x.Representative,
+                    IsActive = x.IsActive
+                })
                 .ToListAsync();
         }
 
-        public async Task<CompanyInfo?> GetByIdAsync(int id)
+        // ================= GET BY ID =================
+        public async Task<CompanyInfoDto?> GetByIdAsync(int id)
         {
-            return await _context.CompanyInfos.FindAsync(id);
+            return await _context.CompanyInfos
+                .Where(x => x.CompanyID == id)
+                .Select(x => new CompanyInfoDto
+                {
+                    CompanyID = x.CompanyID,
+                    CompanyCode = x.CompanyCode,
+                    CompanyName = x.CompanyName,
+                    TaxCode = x.TaxCode,
+                    Email = x.Email,
+                    Phone = x.Phone,
+                    Address = x.Address,
+                    BankAccount = x.BankAccount,
+                    BankName = x.BankName,
+                    BankBranch = x.BankBranch,
+                    Representative = x.Representative,
+                    IsActive = x.IsActive
+                })
+                .FirstOrDefaultAsync();
         }
 
-        public async Task<CompanyInfo> CreateAsync(CompanyInfo model)
+        // ================= CREATE =================
+        public async Task<CompanyInfoDto> CreateAsync(CreateCompanyInfoDto dto)
         {
-            _context.CompanyInfos.Add(model);
+            var entity = new CompanyInfo
+            {
+                CompanyCode = dto.CompanyCode,
+                CompanyName = dto.CompanyName,
+                TaxCode = dto.TaxCode,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Address = dto.Address,
+                BankAccount = dto.BankAccount,
+                BankName = dto.BankName,
+                BankBranch = dto.BankBranch,
+                Representative = dto.Representative,
+                CreatedDate = DateTime.Now,
+                IsActive = true
+            };
+
+            _context.CompanyInfos.Add(entity);
             await _context.SaveChangesAsync();
-            return model;
+
+            return new CompanyInfoDto
+            {
+                CompanyID = entity.CompanyID,
+                CompanyCode = entity.CompanyCode,
+                CompanyName = entity.CompanyName,
+                TaxCode = entity.TaxCode,
+                Email = entity.Email,
+                Phone = entity.Phone,
+                Address = entity.Address,
+                BankAccount = entity.BankAccount,
+                BankName = entity.BankName,
+                BankBranch = entity.BankBranch,
+                Representative = entity.Representative,
+                IsActive = entity.IsActive
+            };
         }
 
-        public async Task<bool> UpdateAsync(CompanyInfo model)
+        // ================= UPDATE =================
+        public async Task<bool> UpdateAsync(int id, UpdateCompanyInfoDto dto)
         {
-            var existing = await _context.CompanyInfos.FindAsync(model.CompanyID);
-            if (existing == null) return false;
+            var entity = await _context.CompanyInfos.FindAsync(id);
+            if (entity == null) return false;
 
-            existing.CompanyCode = model.CompanyCode;
-            existing.CompanyName = model.CompanyName;
-            existing.TaxCode = model.TaxCode;
-            existing.Email = model.Email;
-            existing.Phone = model.Phone;
-            existing.Address = model.Address;
-            existing.BankAccount = model.BankAccount;
-            existing.BankName = model.BankName;
-            existing.BankBranch = model.BankBranch;
-            existing.Representative = model.Representative;
-            existing.UpdatedDate = DateTime.Now;
+            entity.CompanyCode = dto.CompanyCode;
+            entity.CompanyName = dto.CompanyName;
+            entity.TaxCode = dto.TaxCode;
+            entity.Email = dto.Email;
+            entity.Phone = dto.Phone;
+            entity.Address = dto.Address;
+            entity.BankAccount = dto.BankAccount;
+            entity.BankName = dto.BankName;
+            entity.BankBranch = dto.BankBranch;
+            entity.Representative = dto.Representative;
+            entity.IsActive = dto.IsActive;
+            entity.UpdatedDate = DateTime.Now;
 
             await _context.SaveChangesAsync();
             return true;
         }
 
+        // ================= DELETE =================
         public async Task<bool> DeleteAsync(int id)
         {
             var entity = await _context.CompanyInfos.FindAsync(id);
             if (entity == null) return false;
 
-            _context.CompanyInfos.Remove(entity);
+            // ❗ Soft delete
+            entity.IsActive = false;
+            entity.UpdatedDate = DateTime.Now;
+
             await _context.SaveChangesAsync();
             return true;
         }
