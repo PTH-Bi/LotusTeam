@@ -1,0 +1,354 @@
+/* ===== TRAINING.CSS ===== */
+/* Component: Training.vue - Giao diện người dùng xem thông báo đào tạo */
+
+/* ===== LAYOUT CHÍNH ===== */
+.training-page {
+  min-height: 100vh;
+  background: #f2f5f9;
+  color: #243447;
+  display: flex;
+}
+
+.training-main {
+  flex: 1;
+  margin-left: 220px;
+  padding: 22px 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.training-content {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.training-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 28px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  text-align: left;
+  width: 100%;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.training-header .training-title {
+  font-size: 1.8rem;
+  margin: 0;
+  font-weight: 700;
+  color: #1a2634;
+  letter-spacing: -0.02em;
+}
+
+.training-header .page-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  color: #637381;
+  font-weight: 400;
+}
+
+/* ===== CARD CHÍNH ===== */
+.training-card {
+  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 16px;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid #dbe4eb;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.training-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== ITEM ĐÀO TẠO ===== */
+.training-item {
+  border-bottom: 1px solid #e6ecf2;
+  padding: 20px 0;
+  transition: background-color 0.2s ease;
+}
+
+.training-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.training-item:first-child {
+  padding-top: 0;
+}
+
+.training-item:hover {
+  background-color: rgba(59, 130, 246, 0.02);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  border-radius: 8px;
+}
+
+/* Header của item */
+.training-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+.training-item-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f3a53;
+  line-height: 1.4;
+}
+
+.training-item-date {
+  font-size: 0.9rem;
+  color: #5f6b78;
+  white-space: nowrap;
+  background: #f0f4f9;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* Mô tả */
+.training-item-desc {
+  margin: 8px 0 12px;
+  color: #3e4f61;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* Meta info */
+.training-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  color: #4e5f74;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  background: #f8fafd;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.training-item-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.training-item-meta span::before {
+  content: "•";
+  color: #94a3b8;
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.training-item-meta span:first-child::before {
+  display: none;
+}
+
+/* Status badge */
+.training-status {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 6px 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.status-upcoming {
+  background: #fff5df;
+  color: #a47f13;
+  border: 1px solid #ffe5b4;
+}
+
+.status-open {
+  background: #e8ffed;
+  color: #117a34;
+  border: 1px solid #b8f0c5;
+}
+
+.status-completed {
+  background: #e8eff7;
+  color: #235a95;
+  border: 1px solid #c3d9f0;
+}
+
+/* Empty state */
+.training-empty {
+  padding: 60px 40px;
+  background: #fff;
+  border: 1px dashed #c6d2dc;
+  border-radius: 16px;
+  text-align: center;
+  color: #728090;
+  font-size: 1rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+/* ===== LOADING STATE ===== */
+.loading-state {
+  text-align: center;
+  padding: 60px 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 20px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: #4b5563;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ===== ERROR STATE ===== */
+.error-state {
+  text-align: center;
+  padding: 60px 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+  color: #dc2626;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.error-state p {
+  margin-bottom: 20px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.retry-btn {
+  margin-top: 16px;
+  padding: 10px 28px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.retry-btn:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(59, 130, 246, 0.4);
+}
+
+.retry-btn:active {
+  transform: translateY(0);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .training-main {
+    margin-left: 0;
+    padding: 16px;
+  }
+  
+  .training-header {
+    padding: 20px;
+  }
+  
+  .training-header .training-title {
+    font-size: 1.5rem;
+  }
+  
+  .training-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .training-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .training-item-date {
+    align-self: flex-start;
+  }
+  
+  .training-item-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .training-item-meta span::before {
+    display: none;
+  }
+  
+  .training-status {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .training-main {
+    padding: 12px;
+  }
+  
+  .training-header {
+    padding: 16px;
+  }
+  
+  .training-header .training-title {
+    font-size: 1.3rem;
+  }
+  
+  .training-card {
+    padding: 16px;
+  }
+  
+  .training-item-title {
+    font-size: 1.1rem;
+  }
+}

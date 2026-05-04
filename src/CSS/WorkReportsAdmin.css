@@ -1,0 +1,473 @@
+/* ===== Layout chính - căn giữa màn hình ===== */
+.reports-page {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.reports-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.reports-header {
+  margin-bottom: 18px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+
+.reports-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Card báo cáo ===== */
+.report-card {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== Filter bar ===== */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e9eef2;
+  background: #f9fcff;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+.filter-bar .btn-filter,
+.filter-bar .btn-reset {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.filter-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #526477;
+}
+
+.filter-select,
+.filter-input {
+  padding: 6px 10px;
+  border: 1px solid #dae2ec;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1e2b3c;
+  background: white;
+}
+
+
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: #2c5f9a;
+}
+
+.btn-filter,
+.btn-reset {
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  min-width: 70px;
+}
+
+.btn-filter {
+  background: #2c5f9a;
+  border-color: #2c5f9a;
+  color: white;
+}
+
+.btn-filter:hover {
+  background: #1e4a7a;
+  border-color: #1e4a7a;
+}
+
+.btn-reset {
+  background: white;
+  border-color: #d0d9e2;
+  color: #2c3e50;
+}
+
+.btn-reset:hover {
+  background: #f0f4f9;
+  border-color: #a0b3c9;
+}
+
+/* ===== Table ===== */
+.table-responsive {
+  overflow-x: auto;
+  flex: 1;
+  padding: 0 14px;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.report-table th {
+  text-align: left;
+  padding: 10px 6px;
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.report-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid #ecf1f6;
+  color: #1e293b;
+}
+
+
+.report-table tbody tr:hover {
+  background: #f9fcff;
+}
+
+.description-cell {
+  max-width: 200px;
+  color: #64748b;
+}
+
+/* ===== Status badges ===== */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-success {
+  background: #e6f7ec;
+  color: #0f7b3a;
+}
+
+.status-warning {
+  background: #fff5e0;
+  color: #b55f0a;
+}
+
+.status-pending {
+  background: #f0f2f5;
+  color: #4b5565;
+}
+
+.status-info {
+  background: #e7f1ff;
+  color: #1f5a9e;
+}
+
+.status-rejected {
+  background: #ffe7e9;
+  color: #b91c1c;
+}
+
+.status-select {
+  margin: 8px 0 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #dae2ec;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.review-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.btn-download,
+.btn-apply {
+  background: #2c5f9a;
+  border: 1px solid #2c5f9a;
+  border-radius: 16px;
+  color: white;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.status-select {
+  min-width: 110px;
+  font-size: 12px;
+}
+
+
+.btn-download:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-apply:hover,
+.btn-download:hover {
+  background: #1e4a7a;
+  border-color: #1e4a7a;
+}
+
+/* ===== Footer & pagination ===== */
+.report-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  gap: 12px;
+  border-top: 1px solid #e9eef2;
+  background: #fafcff;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dae2ec;
+  background: white;
+  border-radius: 8px;
+  color: #1e2b3c;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #eef3f9;
+  border-color: #b8c9dd;
+}
+
+.pagination-btn.active {
+  background: #2c5f9a;
+  border-color: #2c5f9a;
+  color: white;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: #f1f4f8;
+}
+
+.pagination-dots {
+  padding: 0 6px;
+  color: #7e8b9c;
+}
+
+.report-summary {
+  color: #526477;
+  font-size: 14px;
+}
+
+.report-summary strong {
+  color: #1c314b;
+  font-weight: 600;
+}
+/* ===== Nút chi tiết ===== */
+.btn-detail {
+  background: transparent;
+  border: 1px solid #2c5f9a;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: #2c5f9a;
+  cursor: pointer;
+  transition: none;
+}
+
+.btn-detail:hover {
+  background: #2c5f9a;
+  color: white;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e9eef2;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.modal-close:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* Filed submission cell (WorkReportsAdmin) */
+.report-table td.file-name-cell {
+  color: #1e2b3c;
+  font-weight: 500;
+}
+
+
+.modal-body {
+  padding: 24px;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.detail-label {
+  width: 140px;
+  font-weight: 600;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  color: #1e293b;
+}
+
+/* Deadline status colors */
+.deadline-ontime {
+  color: #0f7b3a;
+  font-weight: 500;
+}
+
+.deadline-early {
+  color: #b55f0a;
+  font-weight: 500;
+}
+
+.deadline-late {
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+/* Approved status */
+.approved-yes {
+  color: #0f7b3a;
+  font-weight: 500;
+}
+
+.approved-no {
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e9eef2;
+  text-align: right;
+}
+
+.btn-close {
+  background: #2c5f9a;
+  border: none;
+  border-radius: 30px;
+  padding: 8px 24px;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+}
+
+.btn-close:hover {
+  background: #1e4a7a;
+}
+
+/* Submitted file cell */
+.report-table td {
+  position: relative;
+}
+
+.report-table td:nth-child(7) {
+  color: #1e2b3c;
+  font-weight: 500;
+}

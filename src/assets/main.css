@@ -1,0 +1,61 @@
+/* Tiện ích chung cho hiệu ứng kính (Glassmorphism) */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Typography Utilities */
+.text-gradient {
+  background: linear-gradient(to right, var(--primary), #4ade80);
+  -webkit-text-fill-color: transparent;
+}
+
+/* Layout Utilities */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-transition-enter-from,
+.page-transition-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Reset style cho các tiêu đề chung */
+.page-title,
+.page-subtitle,
+.section-title {
+  color: var(--foreground);
+}
+
+/* Cố định layout trong toàn app nếu lỗi xếp thẻ màn hình */
+.dashboard-layout,
+.reports-layout,
+.employees-layout,
+.work-reports-layout {
+  min-height: 100vh;
+  background: var(--background);
+}

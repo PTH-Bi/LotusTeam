@@ -1,0 +1,347 @@
+.feedback-admin-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f9fc;
+}
+
+.feedback-admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-admin-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7ef;
+  background: #ffffff;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 24px;
+  color: #0f172a;
+}
+
+.feedback-admin-header .feedback-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  background-color: white;
+  cursor: pointer;
+  outline: none;
+}
+
+.filter-select:hover {
+  border-color: #2563eb;
+}
+
+.filter-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.feedback-admin-content {
+  padding: 20px;
+}
+
+.feedback-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.feedback-form-card,
+.feedback-list-card {
+  background: #ffffff;
+  border: 1px solid #e5e7ef;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.feedback-form-card h2,
+.feedback-list-card h2 {
+  margin-top: 0;
+  font-size: 18px;
+  color: #1e293b;
+}
+
+.feedback-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  height: 140px;
+  padding: 12px;
+  resize: vertical;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.btn-submit {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-submit:hover {
+  background: #1d4ed8;
+}
+
+.feedback-message {
+  margin-top: 10px;
+  color: #0f5132;
+}
+
+.feedback-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.feedback-stats {
+  font-size: 13px;
+  color: #475569;
+}
+
+/* Horizontal scroll layout for feedback items */
+.feedback-items-horizontal-scroll {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  padding: 8px 4px 16px 4px;
+  max-height: none;
+  overflow: visible;
+}
+
+@media (max-width: 1280px) {
+  .feedback-items-horizontal-scroll {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .feedback-items-horizontal-scroll {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .feedback-items-horizontal-scroll {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feedback-item-horizontal-scroll {
+  border: 1px solid #e5e7ef;
+  border-radius: 12px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  min-height: 290px;
+  max-height: 360px;
+  padding: 16px;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.feedback-item-horizontal-scroll:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.12);
+}
+
+.feedback-item-horizontal-scroll .feedback-content {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
+.feedback-item-horizontal-scroll:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.feedback-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.feedback-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.status-badge {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-wait {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.status-done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.feedback-content {
+  font-size: 14px;
+  color: #334155;
+  white-space: pre-wrap;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.feedback-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #64748b;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e5e7ef;
+}
+
+.feedback-author {
+  font-weight: 500;
+  color: #475569;
+}
+
+.feedback-date {
+  color: #94a3b8;
+}
+
+.feedback-reply-list {
+  margin: 8px 0 12px 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #2563eb;
+}
+
+.feedback-reply-item {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.feedback-reply-item strong {
+  color: #2563eb;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.feedback-actions {
+  margin-top: 8px;
+}
+
+.btn-reply {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: none;
+}
+
+.btn-reply:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.reply-input-container {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reply-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  height: 80px;
+  padding: 10px;
+  resize: vertical;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.reply-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.btn-submit-reply {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  align-self: flex-end;
+}
+
+.btn-submit-reply:hover {
+  background: #1d4ed8;
+}
+
+.empty {
+  color: #6b7280;
+  text-align: center;
+  padding: 20px;
+  min-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .feedback-panel {
+    grid-template-columns: 1fr;
+  }
+  
+  .feedback-item-horizontal-scroll {
+    flex: 0 0 300px;
+  }
+}

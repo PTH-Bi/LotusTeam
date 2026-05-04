@@ -1,0 +1,9 @@
+
+.leave-page { display: flex; min-height: 100vh; background: var(--background); }
+.leave-main { flex: 1; display: flex; flex-direction: column; }
+.leave-header { padding: var(--space-4) var(--space-8); height: 80px; display: flex; align-items: center; border-bottom: 1px solid var(--glass-border); }
+.page-title { font-size: 20px; font-weight: 700; }
+.leave-content { padding: var(--space-8); flex: 1; }
+.placeholder-card { height: 100%; border-style: dashed; border-width: 2px; }
+.placeholder-content { text-align: center; }
+.placeholder-icon { font-size: 48px; margin-bottom: var(--space-4); }

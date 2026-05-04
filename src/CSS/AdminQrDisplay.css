@@ -1,0 +1,408 @@
+/* Layout mới với sidebar */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 280px; /* Chiều rộng của sidebar, điều chỉnh theo sidebar của bạn */
+  padding: 20px;
+  overflow-x: auto;
+}
+
+/* Responsive cho mobile */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 15px;
+  }
+}
+
+/* Giữ nguyên các style cũ của bạn từ đây */
+.qr-admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ... phần còn lại giữ nguyên style cũ của bạn ... */
+.qr-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.qr-header h2 {
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.qr-controls {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.control-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.control-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.action-note {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: #7f8c8d;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 10px 20px;
+  border: 2px solid #3498db;
+  background: white;
+  color: #3498db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.action-btn.active {
+  background: #3498db;
+  color: white;
+}
+
+.action-btn:hover {
+  background: #2980b9;
+  color: white;
+  border-color: #2980b9;
+}
+
+.generate-btn, .generate-btn-secondary, .use-existing-btn {
+  width: 100%;
+  padding: 10px 20px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.generate-btn:hover:not(:disabled) {
+  background: #229954;
+}
+
+.generate-btn:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.generate-btn-secondary {
+  width: auto;
+  margin-top: 10px;
+  background: #3498db;
+}
+
+.generate-btn-secondary:hover {
+  background: #2980b9;
+}
+
+.use-existing-btn {
+  width: auto;
+  background: #f39c12;
+  margin-top: 10px;
+}
+
+.use-existing-btn:hover {
+  background: #e67e22;
+}
+
+.qr-display {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  margin-bottom: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  justify-content: center;
+}
+
+.qr-code-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.qr-canvas {
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 10px;
+  background: white;
+  width: 400px;
+  height: 400px;
+}
+
+.qr-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.countdown {
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-info {
+  flex: 1;
+  min-width: 250px;
+}
+
+.info-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #2c3e50;
+  display: inline-block;
+  width: 120px;
+}
+
+.info-item span {
+  color: #34495e;
+}
+
+.in-badge {
+  background: #27ae60;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.out-badge {
+  background: #e74c3c;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background: #27ae60;
+  color: white;
+}
+
+.status-badge.expired {
+  background: #95a5a6;
+  color: white;
+}
+
+.expiring-soon {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.countdown-text {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.qr-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.download-btn, .print-btn, .pdf-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.download-btn {
+  background: #3498db;
+  color: white;
+}
+
+.download-btn:hover:not(:disabled) {
+  background: #2980b9;
+}
+
+.print-btn {
+  background: #f39c12;
+  color: white;
+}
+
+.print-btn:hover:not(:disabled) {
+  background: #e67e22;
+}
+
+.pdf-btn {
+  background: #c0392b;
+  color: white;
+}
+
+.pdf-btn:hover:not(:disabled) {
+  background: #a93226;
+}
+
+.download-btn:disabled, .print-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.no-qr {
+  text-align: center;
+  padding: 50px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  color: #7f8c8d;
+  margin-bottom: 30px;
+}
+
+.no-qr i {
+  font-size: 48px;
+  margin-bottom: 10px;
+  color: #bdc3c7;
+}
+
+.active-qr-info {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.active-qr-info h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.info-card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #27ae60;
+}
+
+.info-card p {
+  margin: 8px 0;
+}
+
+@media (max-width: 768px) {
+  .qr-controls {
+    flex-direction: column;
+  }
+  
+  .qr-display {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .info-item label {
+    width: 100%;
+    margin-bottom: 5px;
+    display: block;
+  }
+  
+  .qr-canvas {
+    width: 280px;
+    height: 280px;
+  }
+}
+
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}

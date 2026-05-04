@@ -1,0 +1,294 @@
+/* Giữ nguyên các style cũ (không xóa) */
+.payroll-page { display: flex; min-height: 100vh; background: var(--background); }
+.payroll-main { flex: 1; display: flex; flex-direction: column; }
+.payroll-header { padding: var(--space-4) var(--space-8); height: 80px; display: flex; align-items: center; border-bottom: 1px solid var(--glass-border); }
+.payroll-title { font-size: 20px; font-weight: 700; }
+.payroll-content { padding: var(--space-8); flex: 1; }
+.placeholder-card { height: 100%; border-style: dashed; border-width: 2px; }
+.placeholder-content { text-align: center; }
+.placeholder-icon { font-size: 48px; margin-bottom: var(--space-4); }
+
+/* ===== THIẾT KẾ MỚI ĐẸP HƠN ===== */
+.payroll-card {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.03);
+}
+
+/* Summary cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.summary-card {
+  background: white;
+  padding: var(--space-4) var(--space-5);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  border: 1px solid #f0f0f0;
+  transition: transform 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+
+.summary-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.summary-value {
+  font-size: 20px;
+  color: #1f2937;
+}
+
+/* Filter section */
+.filter-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-left {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-item label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  font-size: 14px;
+  color: #1f2937;
+  min-width: 100px;
+  transition: border 0.2s;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.filter-search {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 30px;
+  font-size: 14px;
+  width: 250px;
+  background: #f9fafb;
+  transition: all 0.2s;
+}
+
+.filter-search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  height: 38px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 2px 6px rgba(59,130,246,0.3);
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: white;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* Bảng */
+.table-wrapper {
+  overflow-x: auto;
+  margin-bottom: var(--space-6);
+  border-radius: 14px;
+  border: 1px solid #f0f0f0;
+}
+
+.payroll-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: white;
+}
+
+.payroll-table th {
+  text-align: left;
+  padding: 16px 12px;
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.payroll-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #1f2937;
+}
+
+.payroll-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.payroll-table td:first-child,
+.payroll-table th:first-child {
+  padding-left: 20px;
+}
+
+.payroll-table td:last-child,
+.payroll-table th:last-child {
+  padding-right: 20px;
+}
+
+/* Status badges */
+.status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  min-width: 80px;
+}
+
+.status-paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-pending {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+/* Phân trang */
+.pagination-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.pagination {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.pagination-btn {
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.pagination-btn:hover:not(:disabled):not(.active) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.pagination-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-dots {
+  padding: 0 4px;
+  color: #9ca3af;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .filter-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-right {
+    width: 100%;
+  }
+  
+  .filter-search {
+    width: 100%;
+  }
+}
