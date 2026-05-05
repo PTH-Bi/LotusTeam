@@ -63,6 +63,10 @@ const dashboard = {
   overview: (): ApiResponse<any> => axiosClient.get('/Dashboard/overview'),
   hr: (): ApiResponse<any> => axiosClient.get('/Dashboard/hr'),
   attendance: (): ApiResponse<any> => axiosClient.get('/Dashboard/attendance'),
+  workReport: (): ApiResponse<any> => axiosClient.get('/Dashboard/work-report'),
+  trends: (): ApiResponse<any> => axiosClient.get('/Dashboard/trends'),
+  exportHRReport: (): ApiResponse<any> => axiosClient.get('/Dashboard/export-hr', { responseType: 'blob' }),
+  exportAttendanceReport: (): ApiResponse<any> => axiosClient.get('/Dashboard/export-attendance', { responseType: 'blob' }),
   personal: (): ApiResponse<any> => axiosClient.get('/Dashboard/personal')
 }
 

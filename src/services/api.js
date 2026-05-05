@@ -164,21 +164,32 @@ const employees = {
 
 // ==================== FACE ATTENDANCE ====================
 const faceAttendance = {
-  checkIn: (employeeId, imageBase64) => axiosClient.post('/FaceAttendance/checkin', {
-    employeeId,
-    imageBase64
+  // Check-in bằng khuôn mặt
+  checkIn: (employeeId, imageBase64) => {
+    const formData = new FormData()
+    formData.append('EmployeeId', employeeId)
+    formData.append('ImageBase64', imageBase64)
+
+    return axiosClient.post('/FaceAttendance/check-in', formData)
+  },
+  
+  // Check-out bằng khuôn mặt
+  checkOut: (employeeId, imageBase64) => axiosClient.post('/FaceAttendance/check-out', {
+    EmployeeId: employeeId,
+    ImageBase64: imageBase64
   }),
-  checkOut: (employeeId, imageBase64) => axiosClient.post('/FaceAttendance/checkout', {
-    employeeId,
-    imageBase64
-  }),
+  
+  // Lấy lịch sử chấm công khuôn mặt
   getHistory: (employeeId, params) => axiosClient.get(`/FaceAttendance/history/${employeeId}`, { params }),
+  
+  // Đăng ký khuôn mặt
   registerFace: (employeeId, imageBase64) => axiosClient.post('/FaceAttendance/register-face', {
-    employeeId,
-    imageBase64
+    EmployeeId: employeeId,
+    ImageBase64: imageBase64
   }),
-  getToday: (employeeId) => axiosClient.get(`/FaceAttendance/today/${employeeId}`),
-  getRegistrationStatus: (employeeId) => axiosClient.get(`/FaceAttendance/registration-status/${employeeId}`)
+  
+  // Lấy thông tin chấm công hôm nay
+  getToday: (employeeId) => axiosClient.get(`/FaceAttendance/today/${employeeId}`)
 }
 
 // ==================== FEEDBACK ====================
@@ -489,7 +500,6 @@ const api = {
   dashboard,
   departments,
   employees,
-  faceAttendance,
   feedback,
   genders,
   googleAuth,

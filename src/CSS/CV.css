@@ -260,6 +260,49 @@
   margin-bottom: 24px;
 }
 
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f4f6;
+}
+
+.cv-page {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+}
+
+.cv-main {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.cv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.cv-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.cv-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Glass effect cho header nếu có */
+.glass {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
 /* Responsive cho mobile */
 @media (max-width: 768px) {
   .app-container {

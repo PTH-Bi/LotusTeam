@@ -21,10 +21,11 @@
               </svg>
             </template>
           </BaseInput>
-          <BaseButton variant="secondary" iconOnly>
+          <BaseButton variant="secondary" iconOnly @click="refreshAllData">
             <template #icon-left>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <path d="M12 8v8M8 12h8" />
               </svg>
             </template>
           </BaseButton>
@@ -40,9 +41,12 @@
             </div>
             <div class="stat-info">
               <p class="stat-label">{{ stat.label }}</p>
-              <h3 class="stat-value">{{ stat.value }}</h3>
-              <p class="stat-trend" :class="stat.trend > 0 ? 'up' : 'down'">
-                {{ stat.trend > 0 ? '+' : '' }}{{ Math.abs(stat.trend) }}% so với tháng trước
+              <h3 class="stat-value">{{ formatNumber(stat.value) }}</h3>
+              <p class="stat-trend" :class="stat.trend > 0 ? 'up' : stat.trend < 0 ? 'down' : 'neutral'">
+                <span v-if="stat.trend !== 0">
+                  {{ stat.trend > 0 ? '+' : '' }}{{ stat.trend }}%
+                </span>
+                <span v-else>--</span>
               </p>
             </div>
           </BaseCard>
@@ -68,9 +72,21 @@
             <div class="recruitment-header">
               <h2 class="recruitment-title">Nhân sự</h2>
               <div class="recruitment-subnav">
-                <button class="subnav-item active">Tổng quan</button>
-                <button class="subnav-item">Phòng ban</button>
-                <button class="subnav-item">Sinh nhật</button>
+                <button 
+                  class="subnav-item" 
+                  :class="{ active: recruitmentSubTab === 'overview' }"
+                  @click="recruitmentSubTab = 'overview'"
+                >Tổng quan</button>
+                <button 
+                  class="subnav-item" 
+                  :class="{ active: recruitmentSubTab === 'departments' }"
+                  @click="recruitmentSubTab = 'departments'"
+                >Phòng ban</button>
+                <button 
+                  class="subnav-item" 
+                  :class="{ active: recruitmentSubTab === 'birthdays' }"
+                  @click="recruitmentSubTab = 'birthdays'"
+                >Sinh nhật</button>
               </div>
             </div>
 
@@ -78,36 +94,31 @@
               <div class="recruitment-stat-card">
                 <span class="stat-label">Tổng nhân viên</span>
                 <span class="stat-number">{{ hrData?.totalEmployees || 0 }}</span>
-                <span class="stat-trend up">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 15l-6-6-6 6"/>
+                <span class="stat-trend" :class="hrTrends.totalEmployees > 0 ? 'up' : hrTrends.totalEmployees < 0 ? 'down' : 'neutral'">
+                  <svg v-if="hrTrends.totalEmployees !== 0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path :d="hrTrends.totalEmployees > 0 ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'"/>
                   </svg>
-                  {{ newHiresPercentChange }}%
+                  {{ hrTrends.totalEmployees > 0 ? '+' : '' }}{{ Math.abs(hrTrends.totalEmployees) }}%
                 </span>
               </div>
               <div class="recruitment-stat-card">
                 <span class="stat-label">Tuyển dụng mới (tháng này)</span>
                 <span class="stat-number">{{ hrData?.newHiresThisMonth || 0 }}</span>
-                <span class="stat-trend up">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 15l-6-6-6 6"/>
+                <span class="stat-trend" :class="hrTrends.newHires > 0 ? 'up' : hrTrends.newHires < 0 ? 'down' : 'neutral'">
+                  <svg v-if="hrTrends.newHires !== 0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path :d="hrTrends.newHires > 0 ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'"/>
                   </svg>
-                  +8.3%
+                  {{ hrTrends.newHires > 0 ? '+' : '' }}{{ Math.abs(hrTrends.newHires) }}%
                 </span>
               </div>
               <div class="recruitment-stat-card">
                 <span class="stat-label">Phòng ban</span>
                 <span class="stat-number">{{ hrData?.departments?.length || 0 }}</span>
-                <span class="stat-trend up">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 15l-6-6-6 6"/>
-                  </svg>
-                  +0%
-                </span>
+                <span class="stat-trend neutral">--</span>
               </div>
             </div>
 
-            <div class="recruitment-chart-section">
+            <div class="recruitment-chart-section" v-if="recruitmentSubTab === 'overview'">
               <div class="section-header">
                 <h3>Phân bố nhân sự theo phòng ban</h3>
                 <div class="chart-legend">
@@ -123,15 +134,22 @@
             <div class="recruitment-table-section">
               <div class="table-header">
                 <div class="table-tabs">
-                  <button class="table-tab active">Danh sách phòng ban</button>
-                  <button class="table-tab" @click="showBirthdays = !showBirthdays">
-                    {{ showBirthdays ? 'Phòng ban' : 'Sinh nhật sắp tới' }}
-                  </button>
+                  <button 
+                    class="table-tab" 
+                    :class="{ active: recruitmentSubTab === 'departments' }"
+                    @click="recruitmentSubTab = 'departments'"
+                  >Danh sách phòng ban</button>
+                  <button 
+                    class="table-tab" 
+                    :class="{ active: recruitmentSubTab === 'birthdays' }"
+                    @click="recruitmentSubTab = 'birthdays'"
+                  >Sinh nhật sắp tới</button>
                 </div>
-                <button class="export-btn">Xuất báo cáo</button>
+                <button class="export-btn" @click="exportHRReport">Xuất báo cáo</button>
               </div>
 
-              <table class="recruitment-table" v-if="!showBirthdays">
+              <!-- Danh sách phòng ban -->
+              <table class="recruitment-table" v-if="recruitmentSubTab === 'departments'">
                 <thead>
                   <tr>
                     <th>Phòng ban</th>
@@ -154,19 +172,19 @@
                       </div>
                     </td>
                     <td>
-                      <span :class="['status-badge', dept.employeeCount > 10 ? 'active' : 'inactive']">
-                        {{ dept.employeeCount > 10 ? 'Đủ nhân sự' : 'Thiếu nhân sự' }}
+                      <span :class="['status-badge', getDepartmentStatus(dept.employeeCount)]">
+                        {{ getDepartmentStatusText(dept.employeeCount) }}
                       </span>
                     </td>
                     <td>
-                      <button class="action-btn">•••</button>
+                      <button class="action-btn" @click="viewDepartmentDetails(dept.departmentId)">•••</button>
                     </td>
                   </tr>
                 </tbody>
               </table>
 
               <!-- Sinh nhật sắp tới -->
-              <div v-else>
+              <div v-else-if="recruitmentSubTab === 'birthdays'">
                 <div class="performers-list" v-if="hrData?.upcomingBirthdays?.length">
                   <div v-for="(birthday, index) in hrData.upcomingBirthdays" :key="birthday.employeeId" class="performer-item">
                     <div class="performer-rank">{{ index + 1 }}</div>
@@ -176,7 +194,7 @@
                     </div>
                     <div class="performer-score">
                       <span class="score-value">{{ formatDate(birthday.dateOfBirth) }}</span>
-                      <span class="score-label">{{ birthday.age }} TUỔI</span>
+                      <span class="score-label">{{ birthday.age || calculateAge(birthday.dateOfBirth) }} TUỔI</span>
                     </div>
                   </div>
                 </div>
@@ -216,7 +234,9 @@
                     <div class="stat-info">
                       <span class="stat-label">Đúng chỉ tiêu</span>
                       <span class="stat-value">{{ workOntime }}</span>
-                      <span class="stat-trend up">+12%</span>
+                      <span class="stat-trend" :class="workTrends.ontime > 0 ? 'up' : workTrends.ontime < 0 ? 'down' : 'neutral'">
+                        {{ workTrends.ontime > 0 ? '+' : '' }}{{ workTrends.ontime }}%
+                      </span>
                     </div>
                   </div>
                   <div class="work-stat-item">
@@ -224,7 +244,9 @@
                     <div class="stat-info">
                       <span class="stat-label">Muộn/Không hoàn thành</span>
                       <span class="stat-value">{{ workLate }}</span>
-                      <span class="stat-trend down">-6%</span>
+                      <span class="stat-trend" :class="workTrends.late > 0 ? 'up' : workTrends.late < 0 ? 'down' : 'neutral'">
+                        {{ workTrends.late > 0 ? '+' : '' }}{{ workTrends.late }}%
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -238,20 +260,20 @@
                 </div>
 
                 <div class="performers-list">
-                  <div v-for="(performer, index) in topPerformers" :key="performer.name" class="performer-item">
+                  <div v-for="(performer, index) in topPerformers" :key="performer.employeeId" class="performer-item">
                     <div class="performer-rank">{{ index + 1 }}</div>
                     <div class="performer-info">
-                      <div class="performer-name">{{ performer.name }}</div>
-                      <div class="performer-role">{{ performer.role }}</div>
+                      <div class="performer-name">{{ performer.employeeName }}</div>
+                      <div class="performer-role">{{ performer.positionName || performer.departmentName }}</div>
                     </div>
                     <div class="performer-score">
-                      <span class="score-value">{{ performer.score }}%</span>
+                      <span class="score-value">{{ performer.performanceScore }}%</span>
                       <span class="score-label">HIỆU SUẤT</span>
                     </div>
                   </div>
                 </div>
 
-                <button class="view-all-btn">Xem bảng xếp hạng →</button>
+                <button class="view-all-btn" @click="viewAllPerformers">Xem bảng xếp hạng →</button>
               </BaseCard>
             </div>
 
@@ -259,40 +281,48 @@
             <div class="work-metrics">
               <div class="metric-item">
                 <span class="metric-label">Thời gian trung bình</span>
-                <span class="metric-value">4.2h</span>
-                <span class="metric-trend up">+10%</span>
+                <span class="metric-value">{{ workMetrics.avgWorkingHours }}h</span>
+                <span class="metric-trend" :class="workMetrics.avgWorkingHoursTrend > 0 ? 'up' : workMetrics.avgWorkingHoursTrend < 0 ? 'down' : 'neutral'">
+                  {{ workMetrics.avgWorkingHoursTrend > 0 ? '+' : '' }}{{ workMetrics.avgWorkingHoursTrend }}%
+                </span>
               </div>
               <div class="metric-item">
                 <span class="metric-label">Hoàn thành đúng hạn</span>
-                <span class="metric-value">78%</span>
-                <span class="metric-trend up">+4%</span>
+                <span class="metric-value">{{ workMetrics.ontimeRate }}%</span>
+                <span class="metric-trend" :class="workMetrics.ontimeRateTrend > 0 ? 'up' : workMetrics.ontimeRateTrend < 0 ? 'down' : 'neutral'">
+                  {{ workMetrics.ontimeRateTrend > 0 ? '+' : '' }}{{ workMetrics.ontimeRateTrend }}%
+                </span>
               </div>
               <div class="metric-item">
                 <span class="metric-label">Quá hạn ưu tiên</span>
-                <span class="metric-value">12</span>
-                <span class="metric-trend up">+2</span>
+                <span class="metric-value">{{ workMetrics.overduePriorityCount }}</span>
+                <span class="metric-trend" :class="workMetrics.overduePriorityTrend > 0 ? 'up' : workMetrics.overduePriorityTrend < 0 ? 'down' : 'neutral'">
+                  {{ workMetrics.overduePriorityTrend > 0 ? '+' : '' }}{{ workMetrics.overduePriorityTrend }}
+                </span>
               </div>
               <div class="metric-item">
                 <span class="metric-label">Vận tốc nhóm</span>
-                <span class="metric-value">8.4</span>
-                <span class="metric-trend up">+1.2</span>
+                <span class="metric-value">{{ workMetrics.teamVelocity }}</span>
+                <span class="metric-trend" :class="workMetrics.teamVelocityTrend > 0 ? 'up' : workMetrics.teamVelocityTrend < 0 ? 'down' : 'neutral'">
+                  {{ workMetrics.teamVelocityTrend > 0 ? '+' : '' }}{{ workMetrics.teamVelocityTrend }}
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- Tab 3: Điểm danh -->
+          <!-- Tab 3: Điểm danh (đã bỏ Top 5 nhân viên đúng giờ) -->
           <div v-if="activeTab === 'attendance'" class="attendance-tab">
             <div class="attendance-header">
               <h2 class="attendance-title">Điểm danh</h2>
               <div class="attendance-subnav">
-                <button class="subnav-item active" @click="attendanceSubTab = 'overview'">Tổng quan</button>
-                <button class="subnav-item" @click="attendanceSubTab = 'details'">Chi tiết</button>
+                <button class="subnav-item" :class="{ active: attendanceSubTab === 'overview' }" @click="attendanceSubTab = 'overview'">Tổng quan</button>
+                <button class="subnav-item" :class="{ active: attendanceSubTab === 'details' }" @click="attendanceSubTab = 'details'">Chi tiết</button>
               </div>
-              <button class="export-btn">Xuất báo cáo</button>
+              <button class="export-btn" @click="exportAttendanceReport">Xuất báo cáo</button>
             </div>
 
-            <div class="attendance-grid">
-              <!-- Biểu đồ tròn bên trái -->
+            <div class="attendance-single-grid">
+              <!-- Biểu đồ tròn - chiếm toàn bộ -->
               <BaseCard class="attendance-chart-card">
                 <h3>Phân bố đi làm đúng giờ</h3>
                 
@@ -322,38 +352,16 @@
                   </div>
                 </div>
 
-                <div class="improvement-badge">
+                <div class="improvement-badge" :class="improvementRate > 0 ? 'up' : improvementRate < 0 ? 'down' : 'neutral'">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 15l-6-6-6 6"/>
+                    <path :d="improvementRate >= 0 ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'"/>
                   </svg>
-                  <span>Cải thiện +{{ improvementRate }}% so với tháng trước</span>
-                </div>
-              </BaseCard>
-
-              <!-- Top 5 nhân viên đúng giờ nhất bên phải -->
-              <BaseCard class="punctual-card">
-                <div class="punctual-header">
-                  <h3>Top 5 nhân viên đúng giờ nhất</h3>
-                  <span class="month-badge">{{ currentMonthYear }}</span>
-                </div>
-
-                <div class="punctual-list">
-                  <div v-for="(person, index) in topPunctual" :key="person.name" class="punctual-item">
-                    <span class="punctual-rank">{{ index + 1 }}</span>
-                    <div class="punctual-info">
-                      <div class="punctual-name">{{ person.name }}</div>
-                      <div class="punctual-role">{{ person.role }}</div>
-                    </div>
-                    <div class="punctual-record">
-                      <span class="record-value">{{ person.record }}%</span>
-                      <span class="record-label">CHUYÊN CẦN</span>
-                    </div>
-                  </div>
+                  <span>Cải thiện {{ improvementRate > 0 ? '+' : '' }}{{ improvementRate }}% so với tháng trước</span>
                 </div>
               </BaseCard>
             </div>
 
-            <!-- Ngoại lệ gần đây -->
+            <!-- Điểm danh hôm nay -->
             <BaseCard class="exceptions-card">
               <div class="exceptions-header">
                 <h3>Điểm danh hôm nay</h3>
@@ -386,7 +394,7 @@
               </table>
 
               <div class="view-all-link" v-if="attendanceData?.todayAttendance?.length">
-                <a href="#">Xem tất cả →</a>
+                <a href="#" @click.prevent="viewAllAttendance">Xem tất cả →</a>
               </div>
             </BaseCard>
           </div>
@@ -403,7 +411,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Sidebar from './Sidebar.vue'
 import BaseCard from './base/BaseCard.vue'
 import BaseButton from './base/BaseButton.vue'
@@ -423,7 +431,7 @@ interface Birthday {
   employeeName: string
   dateOfBirth: string
   departmentName: string
-  age: number
+  age?: number
 }
 
 interface HRDashboardData {
@@ -472,11 +480,30 @@ interface OverviewDashboardData {
   }
 }
 
+interface TopPerformer {
+  employeeId: number
+  employeeName: string
+  departmentName: string
+  positionName?: string
+  performanceScore: number
+}
+
+interface WorkMetrics {
+  avgWorkingHours: number
+  avgWorkingHoursTrend: number
+  ontimeRate: number
+  ontimeRateTrend: number
+  overduePriorityCount: number
+  overduePriorityTrend: number
+  teamVelocity: number
+  teamVelocityTrend: number
+}
+
 // ==================== STATE ====================
 const searchQuery = ref('')
 const activeTab = ref('recruitment')
 const loading = ref(true)
-const showBirthdays = ref(false)
+const recruitmentSubTab = ref('overview')
 const attendanceSubTab = ref('overview')
 
 // Data from API
@@ -484,6 +511,32 @@ const overviewData = ref<OverviewDashboardData | null>(null)
 const hrData = ref<HRDashboardData | null>(null)
 const attendanceData = ref<AttendanceDashboardData | null>(null)
 const currentUser = ref<{ fullName: string } | null>(null)
+
+// Work report data from API
+const workOntime = ref(0)
+const workLate = ref(0)
+const topPerformers = ref<TopPerformer[]>([])
+const workMetrics = ref<WorkMetrics>({
+  avgWorkingHours: 4.2,
+  avgWorkingHoursTrend: 10,
+  ontimeRate: 78,
+  ontimeRateTrend: 4,
+  overduePriorityCount: 12,
+  overduePriorityTrend: 2,
+  teamVelocity: 8.4,
+  teamVelocityTrend: 1.2
+})
+
+// Trends
+const hrTrends = ref({
+  totalEmployees: 2.5,
+  newHires: 8.3
+})
+
+const workTrends = ref({
+  ontime: 12,
+  late: -6
+})
 
 // ==================== CONSTANTS ====================
 const tabs = [
@@ -493,74 +546,73 @@ const tabs = [
 ]
 
 // ==================== COMPUTED ====================
-const stats = computed(() => [
-  {
-    key: 'totalEmployees',
-    label: 'Tổng nhân viên',
-    value: overviewData.value?.totalEmployees || 0,
-    trend: 2.5,
-    color: 'var(--primary)',
-    bg: 'rgba(79, 70, 229, 0.1)',
-    iconComponent: 'UsersIcon'
-  },
-  {
-    key: 'activeEmployees',
-    label: 'Nhân viên đang làm việc',
-    value: overviewData.value?.activeEmployees || 0,
-    trend: 3.2,
-    color: '#4ade80',
-    bg: 'rgba(74, 222, 128, 0.1)',
-    iconComponent: 'CheckIcon'
-  },
-  {
-    key: 'totalDepartments',
-    label: 'Phòng ban',
-    value: overviewData.value?.totalDepartments || 0,
-    trend: 0,
-    color: '#f59e0b',
-    bg: 'rgba(245, 158, 11, 0.1)',
-    iconComponent: 'BuildingIcon'
-  },
-  {
-    key: 'todayAttendance',
-    label: 'Đi làm hôm nay',
-    value: overviewData.value?.todayAttendance || 0,
-    trend: 5.1,
-    color: '#ef4444',
-    bg: 'rgba(239, 68, 68, 0.1)',
-    iconComponent: 'CalendarIcon'
-  }
-])
+const stats = computed(() => {
+  return [
+    {
+      key: 'totalEmployees',
+      label: 'Tổng nhân viên',
+      value: overviewData.value?.totalEmployees || 0,
+      trend: hrTrends.value.totalEmployees,
+      color: 'var(--primary)',
+      bg: 'rgba(79, 70, 229, 0.1)',
+      iconComponent: 'UsersIcon'
+    },
+    {
+      key: 'activeEmployees',
+      label: 'Nhân viên đang làm việc',
+      value: overviewData.value?.activeEmployees || 0,
+      trend: 3.2,
+      color: '#4ade80',
+      bg: 'rgba(74, 222, 128, 0.1)',
+      iconComponent: 'CheckIcon'
+    },
+    {
+      key: 'totalDepartments',
+      label: 'Phòng ban',
+      value: overviewData.value?.totalDepartments || 0,
+      trend: 0,
+      color: '#f59e0b',
+      bg: 'rgba(245, 158, 11, 0.1)',
+      iconComponent: 'BuildingIcon'
+    },
+    {
+      key: 'todayAttendance',
+      label: 'Đi làm hôm nay',
+      value: overviewData.value?.todayAttendance || 0,
+      trend: 5.1,
+      color: '#ef4444',
+      bg: 'rgba(239, 68, 68, 0.1)',
+      iconComponent: 'CalendarIcon'
+    }
+  ]
+})
 
-// Work report data (mock - sẽ thay bằng API sau)
-const workOntime = ref(742)
-const workLate = ref(110)
-const workCompletionRate = computed(() => Math.round((workOntime.value / (workOntime.value + workLate.value)) * 100))
-
-const topPerformers = ref([
-  { name: 'Phạm Thùy Linh', role: 'Trưởng phòng Marketing', score: 98.5 },
-  { name: 'Nguyễn Văn An', role: 'Senior Developer', score: 96.2 },
-  { name: 'Lê Thị Mai', role: 'Product Designer', score: 94.8 },
-  { name: 'Trần Minh Quân', role: 'Account Manager', score: 92.4 },
-  { name: 'Hoàng Bảo Trâm', role: 'Tuyển dụng', score: 91.7 }
-])
+const workCompletionRate = computed(() => {
+  const total = workOntime.value + workLate.value
+  return total > 0 ? Math.round((workOntime.value / total) * 100) : 0
+})
 
 // Attendance computed from API
+const attendanceStats = computed(() => {
+  const stats = attendanceData.value?.statistics
+  return Array.isArray(stats) ? stats : []
+})
+
 const onTimeCount = computed(() => {
-  if (!attendanceData.value?.statistics?.length) return 0
-  const latest = attendanceData.value.statistics[attendanceData.value.statistics.length - 1]
+  if (attendanceStats.value.length === 0) return 0
+  const latest = attendanceStats.value[attendanceStats.value.length - 1]
   return latest?.presentCount || 0
 })
 
 const lateCount = computed(() => {
-  if (!attendanceData.value?.statistics?.length) return 0
-  const latest = attendanceData.value.statistics[attendanceData.value.statistics.length - 1]
+  if (attendanceStats.value.length === 0) return 0
+  const latest = attendanceStats.value[attendanceStats.value.length - 1]
   return latest?.lateCount || 0
 })
 
 const absentCount = computed(() => {
-  if (!attendanceData.value?.statistics?.length) return 0
-  const latest = attendanceData.value.statistics[attendanceData.value.statistics.length - 1]
+  if (attendanceStats.value.length === 0) return 0
+  const latest = attendanceStats.value[attendanceStats.value.length - 1]
   return latest?.absentCount || 0
 })
 
@@ -568,15 +620,16 @@ const totalAttendanceCount = computed(() => onTimeCount.value + lateCount.value 
 const onTimeRate = computed(() => totalAttendanceCount.value > 0 ? Math.round((onTimeCount.value / totalAttendanceCount.value) * 100) : 0)
 const lateRate = computed(() => totalAttendanceCount.value > 0 ? Math.round((lateCount.value / totalAttendanceCount.value) * 100) : 0)
 const absentRate = computed(() => totalAttendanceCount.value > 0 ? Math.round((absentCount.value / totalAttendanceCount.value) * 100) : 0)
-const improvementRate = computed(() => 2)
-
-const topPunctual = ref([
-  { name: 'Nguyễn Văn An', role: 'Product Designer', record: 100 },
-  { name: 'Trần Thị Bình', role: 'Trưởng phòng Marketing', record: 100 },
-  { name: 'Lê Văn Cường', role: 'Senior Engineer', record: 99.2 },
-  { name: 'Phạm Thị Dung', role: 'HR Specialist', record: 98.5 },
-  { name: 'Hoàng Văn Em', role: 'Data Analyst', record: 98.1 }
-])
+const improvementRate = computed(() => {
+  if (attendanceStats.value.length >= 2) {
+    const prev = attendanceStats.value[attendanceStats.value.length - 2]
+    const current = attendanceStats.value[attendanceStats.value.length - 1]
+    const prevRate = prev ? (prev.presentCount / (prev.presentCount + prev.lateCount + prev.absentCount) * 100) : 0
+    const currentRate = onTimeRate.value
+    return Math.round((currentRate - prevRate) * 10) / 10
+  }
+  return 2
+})
 
 // Helper computed
 const currentMonthYear = computed(() => {
@@ -589,23 +642,52 @@ const todayDate = computed(() => {
   return date.toLocaleDateString('vi-VN')
 })
 
-const newHiresPercentChange = computed(() => 8.3)
-
 // ==================== CANVAS REFS ====================
 const recruitmentCanvas = ref<HTMLCanvasElement | null>(null)
 const workDonutCanvas = ref<HTMLCanvasElement | null>(null)
 const attendanceDonutCanvas = ref<HTMLCanvasElement | null>(null)
 
 // ==================== HELPER METHODS ====================
+const formatNumber = (num: number) => {
+  return num.toLocaleString('vi-VN')
+}
+
 const getDepartmentPercentage = (count: number) => {
   const total = hrData.value?.totalEmployees || 1
   return Math.round((count / total) * 100)
+}
+
+const getDepartmentStatus = (count: number) => {
+  const total = hrData.value?.totalEmployees || 1
+  const percentage = (count / total) * 100
+  if (percentage >= 20) return 'active'
+  if (percentage >= 10) return 'warning'
+  return 'inactive'
+}
+
+const getDepartmentStatusText = (count: number) => {
+  const total = hrData.value?.totalEmployees || 1
+  const percentage = (count / total) * 100
+  if (percentage >= 20) return 'Đủ nhân sự'
+  if (percentage >= 10) return 'Bình thường'
+  return 'Thiếu nhân sự'
 }
 
 const formatDate = (dateString: string) => {
   if (!dateString) return ''
   const date = new Date(dateString)
   return `${date.getDate()}/${date.getMonth() + 1}`
+}
+
+const calculateAge = (dateOfBirth: string) => {
+  const birthDate = new Date(dateOfBirth)
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  return age
 }
 
 const formatTime = (timeString: string | null) => {
@@ -653,6 +735,45 @@ async function loadAttendanceData() {
   }
 }
 
+async function loadWorkReportData() {
+  try {
+    const response = await api.dashboard.workReport()
+    if (response.data?.success) {
+      const data = response.data.data
+      workOntime.value = data.ontimeCount || 0
+      workLate.value = data.lateCount || 0
+      topPerformers.value = data.topPerformers || []
+      workMetrics.value = {
+        avgWorkingHours: data.avgWorkingHours || 4.2,
+        avgWorkingHoursTrend: data.avgWorkingHoursTrend || 10,
+        ontimeRate: data.ontimeRate || 78,
+        ontimeRateTrend: data.ontimeRateTrend || 4,
+        overduePriorityCount: data.overduePriorityCount || 12,
+        overduePriorityTrend: data.overduePriorityTrend || 2,
+        teamVelocity: data.teamVelocity || 8.4,
+        teamVelocityTrend: data.teamVelocityTrend || 1.2
+      }
+      workTrends.value = {
+        ontime: data.ontimeTrend || 12,
+        late: data.lateTrend || -6
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load work report data:', error)
+  }
+}
+
+async function loadTrends() {
+  try {
+    const response = await api.dashboard.trends()
+    if (response.data?.success) {
+      hrTrends.value = response.data.data.hrTrends || hrTrends.value
+    }
+  } catch (error) {
+    console.error('Failed to load trends data:', error)
+  }
+}
+
 async function loadTabData() {
   switch (activeTab.value) {
     case 'recruitment':
@@ -664,14 +785,81 @@ async function loadTabData() {
       setTimeout(() => drawAttendanceDonut(), 100)
       break
     case 'work':
+      await loadWorkReportData()
       setTimeout(() => drawWorkDonut(), 100)
       break
   }
 }
 
+async function refreshAllData() {
+  loading.value = true
+  await Promise.all([
+    loadOverviewData(),
+    loadHRData(),
+    loadAttendanceData(),
+    loadWorkReportData(),
+    loadTrends()
+  ])
+  loading.value = false
+  
+  setTimeout(() => {
+    drawRecruitmentChart()
+    drawWorkDonut()
+    drawAttendanceDonut()
+  }, 100)
+}
+
 function handleTabChange(tabId: string) {
   activeTab.value = tabId
   loadTabData()
+}
+
+// ==================== EXPORT METHODS ====================
+async function exportHRReport() {
+  try {
+    const response = await api.dashboard.exportHRReport()
+    if (response.data) {
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `HR_Report_${new Date().toISOString().split('T')[0]}.xlsx`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    }
+  } catch (error) {
+    console.error('Failed to export HR report:', error)
+  }
+}
+
+async function exportAttendanceReport() {
+  try {
+    const response = await api.dashboard.exportAttendanceReport()
+    if (response.data) {
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Attendance_Report_${new Date().toISOString().split('T')[0]}.xlsx`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    }
+  } catch (error) {
+    console.error('Failed to export attendance report:', error)
+  }
+}
+
+// ==================== VIEW METHODS ====================
+function viewDepartmentDetails(departmentId: number | null) {
+  console.log('View department details:', departmentId)
+}
+
+function viewAllPerformers() {
+  console.log('View all performers')
+}
+
+function viewAllAttendance() {
+  console.log('View all attendance')
 }
 
 // ==================== CHART DRAWING ====================
@@ -682,8 +870,9 @@ function drawRecruitmentChart() {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  const width = canvas.clientWidth
-  const height = canvas.clientHeight
+  const container = canvas.parentElement
+  const width = container?.clientWidth || 800
+  const height = 250
   canvas.width = width
   canvas.height = height
 
@@ -692,7 +881,7 @@ function drawRecruitmentChart() {
 
   ctx.clearRect(0, 0, width, height)
 
-  // Vẽ lưới
+  // Draw grid
   ctx.strokeStyle = '#e5e7eb'
   ctx.lineWidth = 0.5
   ctx.beginPath()
@@ -707,7 +896,7 @@ function drawRecruitmentChart() {
     ctx.fillText(Math.round((maxEmployees / 4) * i).toString(), 30, y + 3)
   }
 
-  // Vẽ cột
+  // Draw bars
   const barWidth = (width - 100) / departments.length * 0.7
   const barSpacing = (width - 100) / departments.length
 
@@ -814,13 +1003,34 @@ function drawAttendanceDonut() {
   ctx.fill()
 }
 
-// ==================== WATCHERS & LIFE CYCLE ====================
+// Watch for data changes to redraw charts
+watch(() => hrData.value, () => {
+  if (activeTab.value === 'recruitment') {
+    setTimeout(() => drawRecruitmentChart(), 100)
+  }
+}, { deep: true })
+
+watch([workOntime, workLate], () => {
+  if (activeTab.value === 'work') {
+    setTimeout(() => drawWorkDonut(), 100)
+  }
+})
+
+watch([onTimeRate, lateRate, absentRate], () => {
+  if (activeTab.value === 'attendance') {
+    setTimeout(() => drawAttendanceDonut(), 100)
+  }
+})
+
+// ==================== LIFE CYCLE ====================
 onMounted(async () => {
   loading.value = true
   await Promise.all([
     loadOverviewData(),
     loadHRData(),
-    loadAttendanceData()
+    loadAttendanceData(),
+    loadWorkReportData(),
+    loadTrends()
   ])
   loading.value = false
   
@@ -830,8 +1040,15 @@ onMounted(async () => {
     drawAttendanceDonut()
   }, 100)
   
-  window.addEventListener('resize', () => {
+  const handleResize = () => {
     drawRecruitmentChart()
+    drawWorkDonut()
+    drawAttendanceDonut()
+  }
+  window.addEventListener('resize', handleResize)
+  
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
   })
 })
 

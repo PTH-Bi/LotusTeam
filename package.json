@@ -13,6 +13,7 @@
     "@unovis/vue": "^1.6.4",
     "axios": "^1.13.6",
     "boostrap": "^2.0.0",
+    "face-api.js": "^0.20.1",
     "html5-qrcode": "^2.3.8",
     "pina": "^0.20.2204228",
     "pinia": "^3.0.4",

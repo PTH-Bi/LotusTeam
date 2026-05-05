@@ -14,7 +14,7 @@ const getBaseUrl = () => {
   }
   
   // Default URL - có thể đổi thành http nếu https không hoạt động
-  return "https://localhost:7010/api"
+  return "https://localhost:7010/api", "http://localhost:5000/api"
 }
 
 const defaultUrl = getBaseUrl()
