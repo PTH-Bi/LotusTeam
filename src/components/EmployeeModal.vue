@@ -41,11 +41,13 @@
               </select>
             </div>
 
-            <div v-if="form.department" class="base-input-group">
+            <div class="base-input-group">
               <label class="base-label">Chức vụ</label>
-              <select v-model="form.position" class="base-select glass" required>
-                <option value="">Chọn chức vụ...</option>
-                <option v-for="pos in filteredPositions" :key="pos.id" :value="pos.name">{{ pos.name }}</option>
+              <select v-model="form.positionId" class="base-select glass" required>
+                <option :value="null">Chọn chức vụ...</option>
+                <option v-for="pos in positions" :key="pos.positionId" :value="pos.positionId">
+                  {{ pos.positionName }}
+                </option>
               </select>
             </div>
 
@@ -60,9 +62,9 @@
             <BaseInput v-model="form.address" label="Địa chỉ" placeholder="Nhập địa chỉ" />
             <div class="base-input-group">
               <label class="base-label">Tình trạng hôn nhân</label>
-              <select v-model="form.maritalStatus" class="base-select glass" required>
-                <option value="">Chọn tình trạng...</option>
-                <option v-for="status in maritalStatusOptions" :key="status" :value="status">{{ status }}</option>
+              <select v-model.number="form.maritalStatus" class="base-select glass" required>
+                <option :value="null">Chọn tình trạng...</option>
+                <option v-for="s in maritalStatusOptions" :key="s.id" :value="s.id">{{ s.label }}</option>
               </select>
             </div>
             <BaseInput v-model="form.identityNumber" label="Số CMND/CCCD" placeholder="Số chứng minh" />
@@ -105,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import BaseCard from './base/BaseCard.vue';
 import BaseButton from './base/BaseButton.vue';
 import BaseInput from './base/BaseInput.vue';
@@ -117,12 +119,14 @@ const props = defineProps({
   employee: Object,
   loading: Boolean,
   departments: Array,
-  positions: Array
+  positions: Array  // có thể truyền từ parent hoặc tự load
 });
 
 const emit = defineEmits(['update:modelValue', 'save']);
 
 const isEdit = ref(false);
+
+// Form data structure
 const form = ref({
   name: '',
   email: '',
@@ -130,7 +134,7 @@ const form = ref({
   birthDate: '',
   employeeCode: '',
   department: '',
-  position: '',
+  positionId: null,
   startDate: '',
   status: 'Đang làm việc',
   genderId: null,
@@ -154,203 +158,120 @@ const form = ref({
   password: ''
 });
 
-const contractTypes = ref([
-  { id: 1, name: '1 năm' },
-  { id: 2, name: '3 năm' },
-  { id: 3, name: '5 năm' }
-])
-const genders = ref([
-  { id: 1, name: 'Nam' },
-  { id: 2, name: 'Nữ' },
-  { id: 3, name: 'Khác' }
-])
-const maritalStatusOptions = ref([
-  'Độc thân',
-  'Đã kết hôn'
-])
-const positions = ref([
-  { id: 1, name: 'Nhân viên' },
-  { id: 2, name: 'Trưởng phòng' },
-  { id: 3, name: 'Giám đốc' },
-  { id: 4, name: 'Trưởng dự án' }
-])
+// Local data from API
+const genders = ref([])
+const contractTypes = ref([])
+const positions = ref([])  // tự load từ API
 
-// Mapping of departments to their available positions
-const departmentPositionsMap = {
-  'công nghệ': [
-    { id: 1, name: 'Nhân viên BackEnd' },
-    { id: 2, name: 'Nhân viên FrontEnd' },
-    { id: 3, name: 'Full Stack' },
-    { id: 4, name: 'Trưởng phòng' }
-  ],
-  'it': [
-    { id: 1, name: 'Nhân viên BackEnd' },
-    { id: 2, name: 'Nhân viên FrontEnd' },
-    { id: 3, name: 'Full Stack' },
-    { id: 4, name: 'Trưởng phòng' }
-  ],
-  'phòng it': [
-    { id: 1, name: 'Nhân viên BackEnd' },
-    { id: 2, name: 'Nhân viên FrontEnd' },
-    { id: 3, name: 'Full Stack' },
-    { id: 4, name: 'Trưởng phòng' }
-  ],
-  'marketing': [
-    { id: 5, name: 'Nhân viên' },
-    { id: 6, name: 'Trưởng phòng' }
-  ],
-  'phòng marketing': [
-    { id: 5, name: 'Nhân viên' },
-    { id: 6, name: 'Trưởng phòng' }
-  ],
-  'nhân sự': [
-    { id: 7, name: 'Nhân viên' },
-    { id: 8, name: 'Trưởng phòng' }
-  ],
-  'phòng nhân sự': [
-    { id: 7, name: 'Nhân viên' },
-    { id: 8, name: 'Trưởng phòng' }
-  ],
-  'kế toán': [
-    { id: 9, name: 'Nhân viên' },
-    { id: 10, name: 'Trưởng phòng' }
-  ],
-  'phòng kế toán': [
-    { id: 9, name: 'Nhân viên' },
-    { id: 10, name: 'Trưởng phòng' }
-  ]
-}
+const maritalStatusOptions = [
+  { id: 1, label: 'Đã kết hôn' },
+  { id: 2, label: 'Chưa kết hôn' }
+]
 
-// Compute filtered positions based on selected department
-const filteredPositions = computed(() => {
-  const deptKey = String(form.value.department || '').trim().toLowerCase()
-  return departmentPositionsMap[deptKey] || positions.value
-})
-
-onMounted(async () => {
-  // Load contract types
-  try {
-    console.log('🔄 Loading contract types from /ContractTypes...')
-    const res = await api.contractTypes.list()
-    console.log('📦 Contract types response:', res)
-    
-    let list = []
-    if (Array.isArray(res)) {
-      list = res
-    } else if (res?.data && Array.isArray(res.data)) {
-      list = res.data
-    } else if (res?.items && Array.isArray(res.items)) {
-      list = res.items
-    } else {
-      console.warn('⚠️ Unexpected contract types response format:', typeof res, res)
-      list = []
-    }
-    
-    if (list.length > 0) {
-      const apiContractTypes = list.map(ct => ({
-        id: ct.id ?? ct.contractTypeId ?? ct.ContractTypeId ?? ct.ContractTypeID ?? ct.ID ?? ct.Id,
-        name: ct.name ?? ct.title ?? ct.contractTypeName ?? ct.typeName ?? ct.type ?? ct.contractName ?? ct.nameVi ?? ct.nameEn ?? `Contract Type ${ct.id || '?'}`
-      }))
-      contractTypes.value = apiContractTypes
-      console.log('✅ Loaded contract types from API:', contractTypes.value)
-    } else {
-      console.warn('⚠️ No contract types returned from API, using defaults')
-    }
-  } catch (err) {
-    console.error('❌ Failed to load contract types from API:', err?.message || err)
-    console.error('   Error details:', err)
-    console.log('   Using fallback defaults')
-  }
-  
-  // Load genders
-  try {
-    console.log('🔄 Loading genders from /Genders...')
-    const resG = await api.genders.list()
-    console.log('📦 Genders response:', resG)
-    
-    let gList = []
-    if (Array.isArray(resG)) {
-      gList = resG
-    } else if (resG?.data && Array.isArray(resG.data)) {
-      gList = resG.data
-    } else if (resG?.items && Array.isArray(resG.items)) {
-      gList = resG.items
-    } else {
-      console.warn('⚠️ Unexpected genders response format:', typeof resG, resG)
-      gList = []
-    }
-    
-    if (gList.length > 0) {
-      const apiGenders = gList.map(g => ({
-        id: g.id ?? g.GenderID ?? g.genderId ?? g.ID ?? g.Id,
-        name: g.name ?? g.GenderName ?? g.genderName ?? g.nameVi ?? g.nameEn ?? `Gender ${g.id || '?'}`
-      }))
-      genders.value = apiGenders
-      console.log('✅ Loaded genders from API:', genders.value)
-    } else {
-      console.warn('⚠️ No genders returned from API, using defaults')
-    }
-  } catch (err) {
-    console.error('❌ Failed to load genders from API:', err?.message || err)
-    console.error('   Error details:', err)
-    console.log('   Using fallback defaults')
-  }
-
-  // Load positions
+// Load positions từ API
+async function loadPositions() {
   try {
     console.log('🔄 Loading positions from /Positions...')
-    const resP = await api.positions.list()
-    console.log('📦 Positions response:', resP)
+    const response = await api.positions.list()
+    console.log('📦 Raw positions response:', response)
     
-    let pList = []
-    if (Array.isArray(resP)) {
-      pList = resP
-    } else if (resP?.data && Array.isArray(resP.data)) {
-      pList = resP.data
-    } else if (resP?.items && Array.isArray(resP.items)) {
-      pList = resP.items
-    } else {
-      console.warn('⚠️ Unexpected positions response format:', typeof resP, resP)
-      pList = []
+    // Xử lý response từ API
+    let positionsData = []
+    if (response?.data && Array.isArray(response.data)) {
+      positionsData = response.data
+    } else if (Array.isArray(response)) {
+      positionsData = response
+    } else if (response?.items && Array.isArray(response.items)) {
+      positionsData = response.items
     }
     
-    if (pList.length > 0) {
-      const apiPositions = pList.map(p => ({
-        id: p.id ?? p.PositionID ?? p.positionId ?? p.ID ?? p.Id,
-        name: p.name ?? p.PositionName ?? p.positionName ?? p.nameVi ?? p.nameEn ?? `Position ${p.id || '?'}`
-      }))
-      positions.value = apiPositions
-      console.log('✅ Loaded positions from API:', positions.value)
-    } else {
-      console.warn('⚠️ No positions returned from API, using defaults')
-    }
+    // Map đúng cấu trúc từ API: positionId, positionName
+    positions.value = positionsData.map(p => ({
+      positionId: p.positionId,
+      positionName: p.positionName
+    }))
+    
+    console.log('✅ Loaded positions:', positions.value)
   } catch (err) {
-    console.error('❌ Failed to load positions from API:', err?.message || err)
-    console.error('   Error details:', err)
-    console.log('   Using fallback defaults')
+    console.error('❌ Failed to load positions:', err)
+    positions.value = []
   }
+}
+
+// Load genders từ API
+async function loadGenders() {
+  try {
+    console.log('🔄 Loading genders from /Genders...')
+    const response = await api.genders.list()
+    
+    let gendersData = []
+    if (response?.data && Array.isArray(response.data)) {
+      gendersData = response.data
+    } else if (Array.isArray(response)) {
+      gendersData = response
+    } else if (response?.items && Array.isArray(response.items)) {
+      gendersData = response.items
+    }
+    
+    genders.value = gendersData.map(g => ({
+      id: g.id ?? g.genderId ?? g.GenderID,
+      name: g.name ?? g.genderName ?? g.GenderName
+    }))
+    
+    console.log('✅ Loaded genders:', genders.value)
+  } catch (err) {
+    console.error('❌ Failed to load genders:', err)
+  }
+}
+
+// Load contract types từ API
+async function loadContractTypes() {
+  try {
+    console.log('🔄 Loading contract types from /ContractTypes...')
+    const response = await api.contractTypes.list()
+    
+    let contractData = []
+    if (response?.data && Array.isArray(response.data)) {
+      contractData = response.data
+    } else if (Array.isArray(response)) {
+      contractData = response
+    } else if (response?.items && Array.isArray(response.items)) {
+      contractData = response.items
+    }
+    
+    contractTypes.value = contractData.map(ct => ({
+      id: ct.id ?? ct.contractTypeId ?? ct.ContractTypeID,
+      name: ct.name ?? ct.contractTypeName ?? ct.title
+    }))
+    
+    console.log('✅ Loaded contract types:', contractTypes.value)
+  } catch (err) {
+    console.error('❌ Failed to load contract types:', err)
+  }
+}
+
+// Load all data khi component mount
+onMounted(async () => {
+  await Promise.all([
+    loadPositions(),
+    loadGenders(),
+    loadContractTypes()
+  ])
 })
 
+// Watch for employee prop changes (edit mode)
 watch(() => props.employee, (newVal) => {
   if (newVal) {
-    form.value = { ...newVal };
-    // ensure account fields are present and enabled by default
-    form.value.createUserAccount = form.value.createUserAccount ?? true;
-    form.value.username = form.value.username ?? '';
-    form.value.password = '';
-    isEdit.value = true;
+    form.value = { ...newVal }
+    form.value.createUserAccount = form.value.createUserAccount ?? true
+    form.value.username = form.value.username ?? ''
+    form.value.password = ''
+    isEdit.value = true
   } else {
-    resetForm();
-    isEdit.value = false;
+    resetForm()
+    isEdit.value = false
   }
-}, { immediate: true });
-
-watch(() => form.value.department, (newDept) => {
-  // When department changes, reset position to empty
-  if (newDept) {
-    form.value.position = '';
-  }
-});
+}, { immediate: true, deep: true })
 
 function resetForm() {
   form.value = {
@@ -360,7 +281,7 @@ function resetForm() {
     birthDate: '',
     employeeCode: '',
     department: '',
-    position: '',
+    positionId: null,
     startDate: '',
     status: 'Đang làm việc',
     genderId: null,
@@ -382,16 +303,124 @@ function resetForm() {
     createUserAccount: true,
     username: '',
     password: ''
-  };
+  }
 }
 
 function close() {
-  emit('update:modelValue', false);
+  emit('update:modelValue', false)
 }
 
 function submit() {
-  emit('save', { ...form.value });
+  // Debug: kiểm tra positionId trước khi submit
+  console.log('🔍 Submitting form with positionId:', form.value.positionId)
+  console.log('📋 Full form data:', JSON.parse(JSON.stringify(form.value)))
+  
+  // Kiểm tra nếu positionId bị null hoặc undefined
+  if (!form.value.positionId && form.value.positionId !== 0) {
+    console.warn('⚠️ positionId is null or undefined!')
+  }
+  
+  emit('save', { ...form.value })
 }
 </script>
 
+<style scoped>
+/* Your existing styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
 
+.employee-modal {
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.mt-4 {
+  margin-top: 24px;
+}
+
+  .section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+
+.subsection-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 16px 0 12px 0;
+  color: #333;
+}
+
+  .base-input-group {
+  margin-bottom: 16px;
+}
+
+.base-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #000;
+}
+
+  .base-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  font-size: 0.9rem;
+}
+
+.base-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>

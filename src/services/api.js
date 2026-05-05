@@ -37,9 +37,9 @@ const attendance = {
   activeQr: () => axiosClient.get('/Attendance/active-qr'),
   scan: (data) => axiosClient.post('/Attendance/scan', data),
   // Face Attendance
-  faceRegister: (data) => axiosClient.post('/FaceAttendance/register', data),
+  faceRegister: (data) => axiosClient.post('/FaceAttendance/register-face', data),
   faceVerify: (data) => axiosClient.post('/FaceAttendance/verify', data),
-  faceCheckin: (data) => axiosClient.post('/FaceAttendance/checkin', data)
+  faceCheckin: (data) => axiosClient.post('/FaceAttendance/check-in', data)
 }
 
 // ==================== AUTH ====================
@@ -166,27 +166,44 @@ const employees = {
 const faceAttendance = {
   // Check-in bằng khuôn mặt
   checkIn: (employeeId, imageBase64) => {
-    const formData = new FormData()
-    formData.append('EmployeeId', employeeId)
-    formData.append('ImageBase64', imageBase64)
-
-    return axiosClient.post('/FaceAttendance/check-in', formData)
+    const empIdNum = employeeId != null ? Number(employeeId) : null
+    // strip data URL prefix if present
+    const stripped = typeof imageBase64 === 'string' ? imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') : imageBase64
+    // send plain payload expected by the backend
+    return axiosClient.post('/FaceAttendance/check-in', {
+      dto: {
+        EmployeeId: empIdNum,
+        ImageBase64: stripped
+      }
+    })
   },
-  
+
   // Check-out bằng khuôn mặt
-  checkOut: (employeeId, imageBase64) => axiosClient.post('/FaceAttendance/check-out', {
-    EmployeeId: employeeId,
-    ImageBase64: imageBase64
-  }),
+  checkOut: (employeeId, imageBase64) => {
+    const empIdNum = employeeId != null ? Number(employeeId) : null
+    const stripped = typeof imageBase64 === 'string' ? imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') : imageBase64
+    return axiosClient.post('/FaceAttendance/check-out', {
+      dto: {
+        EmployeeId: empIdNum,
+        ImageBase64: stripped
+      }
+    })
+  },
   
   // Lấy lịch sử chấm công khuôn mặt
   getHistory: (employeeId, params) => axiosClient.get(`/FaceAttendance/history/${employeeId}`, { params }),
   
   // Đăng ký khuôn mặt
-  registerFace: (employeeId, imageBase64) => axiosClient.post('/FaceAttendance/register-face', {
-    EmployeeId: employeeId,
-    ImageBase64: imageBase64
-  }),
+  registerFace: (employeeId, imageBase64) => {
+    const empIdNum = employeeId != null ? Number(employeeId) : null
+    const stripped = typeof imageBase64 === 'string' ? imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, '') : imageBase64
+    return axiosClient.post('/FaceAttendance/register-face', {
+      dto: {
+        EmployeeId: empIdNum,
+        ImageBase64: stripped
+      }
+    })
+  },
   
   // Lấy thông tin chấm công hôm nay
   getToday: (employeeId) => axiosClient.get(`/FaceAttendance/today/${employeeId}`)
@@ -259,15 +276,42 @@ const leaveBalance = {
 
 // ==================== PAYROLL ====================
 const payroll = {
-  calculate: (payPeriod) => axiosClient.post('/Payroll/calculate', null, { params: { payPeriod } }),
-  calculateBulk: (payPeriod, employeeIds = []) => axiosClient.post('/Payroll/calculate-bulk', employeeIds, { params: { payPeriod } }),
-  byEmployee: (employeeId) => axiosClient.get(`/Payroll/employee/${employeeId}`),
-  get: (payrollId) => axiosClient.get(`/Payroll/${payrollId}`),
-  approve: (payPeriod) => axiosClient.post('/Payroll/approve', null, { params: { payPeriod } }),
-  taxSnapshot: (payrollId) => axiosClient.post(`/Payroll/tax-snapshot/${payrollId}`),
-  history: (employeeId) => axiosClient.get(`/Payroll/history/${employeeId}`),
-  list: (params) => axiosClient.get('/Payroll', { params }),
-  export: (payPeriod) => axiosClient.get('/Payroll/export', { params: { payPeriod }, responseType: 'blob' })
+  // Core payroll endpoints
+  calculate: (data) => axiosClient.post('/payroll/calculate', data),
+  calculateBulk: (data) => axiosClient.post('/payroll/calculate-bulk', data),
+  byEmployee: (employeeId) => axiosClient.get(`/payroll/employee/${employeeId}`),
+  get: (payrollId) => axiosClient.get(`/payroll/${payrollId}`),
+  list: (params) => axiosClient.get('/payroll', { params }),
+  all: (params) => axiosClient.get('/payroll/all', { params }),
+  flat: (params) => axiosClient.get('/payroll/flat', { params }),
+
+  // Actions
+  approve: (data) => axiosClient.post('/payroll/approve', data),
+  taxSnapshot: (payrollId, data) => axiosClient.post(`/payroll/tax-snapshot/${payrollId}`, data),
+  history: (employeeId) => axiosClient.get(`/payroll/history/${employeeId}`),
+  export: (payPeriod) => axiosClient.get('/payroll/export', { params: { payPeriod }, responseType: 'blob' }),
+
+  // Allowances
+  createAllowance: (data) => axiosClient.post('/payroll/allowance', data),
+  getAllowancesByEmployee: (employeeId) => axiosClient.get(`/payroll/allowance/${employeeId}`),
+
+  // Bonuses
+  createBonus: (data) => axiosClient.post('/payroll/bonus', data),
+  getBonusesByEmployee: (employeeId) => axiosClient.get(`/payroll/bonus/${employeeId}`),
+
+  // Deductions
+  createDeduction: (data) => axiosClient.post('/payroll/deduction', data),
+  getDeductionsByEmployee: (employeeId) => axiosClient.get(`/payroll/deduction/${employeeId}`),
+
+  // Dependents
+  createDependent: (data) => axiosClient.post('/payroll/dependent', data),
+  getDependentsByEmployee: (employeeId) => axiosClient.get(`/payroll/dependent/${employeeId}`),
+  deactivateDependent: (dependentId) => axiosClient.put(`/payroll/dependent/${dependentId}/deactivate`),
+
+  // Dependent allowances
+  calculateDependentAllowance: (data) => axiosClient.post('/payroll/dependent-allowance/calculate', data),
+  calculateDependentAllowanceAll: (data) => axiosClient.post('/payroll/dependent-allowance/calculate-all', data),
+  getDependentAllowanceByEmployee: (employeeId) => axiosClient.get(`/payroll/dependent-allowance/${employeeId}`)
 }
 
 // ==================== PAYROLL BANK TRANSFERS ====================
@@ -500,6 +544,7 @@ const api = {
   dashboard,
   departments,
   employees,
+  faceAttendance,
   feedback,
   genders,
   googleAuth,
