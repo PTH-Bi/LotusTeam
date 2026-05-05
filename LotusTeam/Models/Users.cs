@@ -12,6 +12,7 @@ namespace LotusTeam.Models
         public string Username { get; set; } = null!;
 
         [Required]
+        [MaxLength(255)]
         public string PasswordHash { get; set; } = null!;
 
         public bool IsActive { get; set; }

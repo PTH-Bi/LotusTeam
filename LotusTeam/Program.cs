@@ -4,15 +4,13 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using LotusTeam.Data;
-using LotusTeam.Authorization;
-using Microsoft.AspNetCore.Authorization;
 using LotusTeam.Services;
 using LotusTeam.Models;
-using BCrypt.Net;
-using LotusTeam.Service;
 using Microsoft.Extensions.FileProviders;
 using LotusTeam.Interfaces;
 using System.Net;
+using System.Security.Claims;
+using LotusTeam.Service;
 
 namespace LotusTeam
 {
@@ -23,11 +21,10 @@ namespace LotusTeam
             var builder = WebApplication.CreateBuilder(args);
 
             // ========================= SERVICES =========================
-
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
-            // ========================= SWAGGER + JWT =========================
+            // ========================= SWAGGER =========================
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -35,6 +32,8 @@ namespace LotusTeam
                     Title = "LotusTeam API",
                     Version = "v1"
                 });
+
+                c.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -72,7 +71,7 @@ namespace LotusTeam
                 .EnableSensitiveDataLogging()
             );
 
-            // ========================= JWT AUTHENTICATION =========================
+            // ========================= JWT =========================
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["Secret"];
 
@@ -91,6 +90,7 @@ namespace LotusTeam
                 {
                     options.RequireHttpsMetadata = false;
                     options.SaveToken = true;
+
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -102,26 +102,16 @@ namespace LotusTeam
                         ValidAudience = jwtSettings["Audience"],
 
                         IssuerSigningKey = new SymmetricSecurityKey(key),
+
+                        RoleClaimType = ClaimTypes.Role,
+                        NameClaimType = ClaimTypes.Name,
+
                         ClockSkew = TimeSpan.Zero
                     };
                 });
 
-            // ========================= AUTHORIZATION =========================
-            builder.Services.AddAuthorization(options =>
-            {
-                options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-                options.AddPolicy("HrOnly", policy => policy.RequireRole("HR"));
-
-                // Permission-based
-                options.AddPolicy("Permission", policy =>
-                {
-                    policy.RequireAssertion(context =>
-                        context.User.HasClaim(c => c.Type == "permission"));
-                });
-            });
-
-            builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-            builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+            // ========================= AUTHORIZATION (ROLE-BASED) =========================
+            builder.Services.AddAuthorization();
 
             // ========================= CACHE =========================
             builder.Services.AddMemoryCache();
@@ -149,9 +139,6 @@ namespace LotusTeam
             builder.Services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
             builder.Services.AddScoped<ICompanyInfoService, CompanyInfoService>();
             builder.Services.AddScoped<ITrainingService, TrainingService>();
-            builder.Services.AddHttpClient();
-            builder.Services.AddHostedService<GmailBackgroundService>();
-            builder.Services.AddScoped<PdfParserService>();
             builder.Services.AddScoped<IAttendanceService, AttendanceService>();
             builder.Services.AddScoped<IBankPartnerService, BankPartnerService>();
             builder.Services.AddScoped<IWorkReportService, WorkReportService>();
@@ -160,19 +147,26 @@ namespace LotusTeam
             builder.Services.AddScoped<IRemoteAttendanceService, RemoteAttendanceService>();
             builder.Services.AddScoped<IMultiPositionCvFilterService, MultiPositionCvFilterService>();
             builder.Services.AddScoped<IFaceRecognitionProvider, MockFaceRecognitionProvider>();
+
             builder.Services.AddScoped<EmailService>();
             builder.Services.AddScoped<CvFilterService>();
             builder.Services.AddScoped<ChatbotService>();
             builder.Services.AddScoped<HRQueryService>();
+
+            builder.Services.AddHttpClient();
             builder.Services.AddHttpClient<AIService>();
+
             builder.Services.AddHttpClient<GmailService>()
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                UseProxy = true,
-                Proxy = WebRequest.GetSystemWebProxy(),
-                PreAuthenticate = true,
-                UseDefaultCredentials = true
-            });
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    UseProxy = true,
+                    Proxy = WebRequest.GetSystemWebProxy(),
+                    PreAuthenticate = true,
+                    UseDefaultCredentials = true
+                });
+
+            builder.Services.AddHostedService<GmailBackgroundService>();
+            builder.Services.AddScoped<PdfParserService>();
 
             // ========================= CORS =========================
             builder.Services.AddCors(options =>
@@ -183,11 +177,6 @@ namespace LotusTeam
                           .AllowAnyMethod()
                           .AllowAnyHeader();
                 });
-            });
-
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.CustomSchemaIds(type => type.FullName);
             });
 
             builder.Services.AddHttpContextAccessor();
@@ -204,172 +193,56 @@ namespace LotusTeam
                 app.UseDeveloperExceptionPage();
             }
 
-            // ========================= SEED DATA =========================
+            // ========================= SEED ROLE + ADMIN =========================
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                // Đảm bảo database được tạo
                 await context.Database.EnsureCreatedAsync();
 
-                try
+                if (!context.Roles.Any())
                 {
-                    // 1. Seed Permissions
-                    Console.WriteLine("🔄 Đang seed permissions...");
-                    if (!context.Permissions.Any())
+                    var roles = new List<Role>
                     {
-                        var permissions = new List<Permission>
-                        {
-                            // AUTH
-                            new Permission { PermissionCode = "AUTH_PROFILE_VIEW", PermissionName = "Xem hồ sơ cá nhân", Module = "AUTH" },
-                            new Permission { PermissionCode = "AUTH_PROFILE_UPDATE", PermissionName = "Cập nhật hồ sơ cá nhân", Module = "AUTH" },
-                            new Permission { PermissionCode = "AUTH_CHANGE_PASSWORD", PermissionName = "Đổi mật khẩu", Module = "AUTH" },
-                            new Permission { PermissionCode = "AUTH_LOGOUT", PermissionName = "Đăng xuất", Module = "AUTH" },
-                            new Permission { PermissionCode = "AUTH_SESSION_MANAGE", PermissionName = "Quản lý phiên đăng nhập", Module = "AUTH" },
+                        new Role { RoleCode = "SUPER_ADMIN", RoleName = "Super Admin" },
+                        new Role { RoleCode = "ADMIN", RoleName = "Admin" },
+                        new Role { RoleCode = "HR_MANAGER", RoleName = "HR Manager" },
+                        new Role { RoleCode = "HR_STAFF", RoleName = "HR Staff" },
+                        new Role { RoleCode = "DIRECTOR", RoleName = "Director" },
+                        new Role { RoleCode = "MANAGER", RoleName = "Manager" },
+                        new Role { RoleCode = "TEAM_LEADER", RoleName = "Team Leader" },
+                        new Role { RoleCode = "EMPLOYEE", RoleName = "Employee" },
+                        new Role { RoleCode = "INTERN", RoleName = "Intern" }
+                    };
 
-                            // USER
-                            new Permission { PermissionCode = "USER_VIEW", PermissionName = "Xem người dùng", Module = "USER" },
-                            new Permission { PermissionCode = "USER_CREATE", PermissionName = "Tạo người dùng", Module = "USER" },
-                            new Permission { PermissionCode = "USER_UPDATE", PermissionName = "Cập nhật người dùng", Module = "USER" },
-                            new Permission { PermissionCode = "USER_DELETE", PermissionName = "Xóa người dùng", Module = "USER" },
-                            new Permission { PermissionCode = "USER_RESET_PASSWORD", PermissionName = "Reset mật khẩu", Module = "USER" },
-                            new Permission { PermissionCode = "USER_TOGGLE_ACTIVE", PermissionName = "Khóa / Mở người dùng", Module = "USER" }
-                        };
-
-                        context.Permissions.AddRange(permissions);
-                        await context.SaveChangesAsync();
-                        Console.WriteLine($"✅ Đã seed {permissions.Count} permissions.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("ℹ️ Permissions đã tồn tại, bỏ qua.");
-                    }
-
-                    // 2. Seed Roles
-                    Console.WriteLine("🔄 Đang seed roles...");
-                    if (!context.Roles.Any())
-                    {
-                        var adminRole = new Role
-                        {
-                            RoleCode = "ADMIN",
-                            RoleName = "Administrator"
-                        };
-
-                        var hrRole = new Role
-                        {
-                            RoleCode = "HR",
-                            RoleName = "Human Resource"
-                        };
-
-                        context.Roles.AddRange(adminRole, hrRole);
-                        await context.SaveChangesAsync();
-                        Console.WriteLine("✅ Đã seed 2 roles.");
-
-                        // Gán permissions cho roles
-                        Console.WriteLine("🔄 Đang gán permissions cho roles...");
-                        var allPermissions = context.Permissions.ToList();
-
-                        // Gán tất cả permissions cho Admin
-                        foreach (var permission in allPermissions)
-                        {
-                            context.RolePermissions.Add(new RolePermissions
-                            {
-                                RoleID = adminRole.RoleID,
-                                PermissionID = permission.PermissionID
-                            });
-                        }
-
-                        // Gán một số permissions cho HR
-                        var hrPermissions = allPermissions
-                            .Where(p => p.PermissionCode.StartsWith("AUTH_") ||
-                                        p.PermissionCode.StartsWith("USER_"))
-                            .ToList();
-
-                        foreach (var permission in hrPermissions)
-                        {
-                            context.RolePermissions.Add(new RolePermissions
-                            {
-                                RoleID = hrRole.RoleID,
-                                PermissionID = permission.PermissionID
-                            });
-                        }
-
-                        await context.SaveChangesAsync();
-                        Console.WriteLine($"✅ Đã gán {allPermissions.Count} permissions cho Admin và {hrPermissions.Count} permissions cho HR.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("ℹ️ Roles đã tồn tại, bỏ qua.");
-                    }
-
-                    // 3. Seed Admin User
-                    Console.WriteLine("🔄 Đang seed admin user...");
-                    if (!context.Users.Any())
-                    {
-                        // Xóa tất cả UserRoles cũ nếu có
-                        if (context.UserRoles.Any())
-                        {
-                            context.UserRoles.RemoveRange(context.UserRoles);
-                            await context.SaveChangesAsync();
-                        }
-
-                        // Xóa tất cả Users cũ nếu có
-                        if (context.Users.Any())
-                        {
-                            context.Users.RemoveRange(context.Users);
-                            await context.SaveChangesAsync();
-                        }
-
-                        // Tạo admin user
-                        var admin = new User
-                        {
-                            Username = "admin",
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                            IsActive = true,
-                            CreatedDate = DateTime.Now,
-                            EmployeeID = null
-                        };
-
-                        context.Users.Add(admin);
-                        await context.SaveChangesAsync();
-
-                        // Lấy admin role
-                        var adminRole = await context.Roles.FirstAsync(r => r.RoleCode == "ADMIN");
-
-                        // Gán role cho admin
-                        context.UserRoles.Add(new UserRoles
-                        {
-                            UserID = admin.UserID,
-                            RoleID = adminRole.RoleID
-                        });
-
-                        await context.SaveChangesAsync();
-
-                        Console.WriteLine("✅ Admin user đã được seed thành công!");
-                        Console.WriteLine($"   Username: admin");   
-                        Console.WriteLine($"   Password: 123456");
-                        Console.WriteLine($"   Role: ADMIN");
-                        Console.WriteLine($"   EmployeeID: null");
-                    }
-                    else
-                    {
-                        // Đảm bảo user admin có EmployeeID = null
-                        var existingAdmin = await context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
-                        if (existingAdmin != null && existingAdmin.EmployeeID.HasValue)
-                        {
-                            existingAdmin.EmployeeID = null;
-                            await context.SaveChangesAsync();
-                            Console.WriteLine("✅ Đã cập nhật admin user: EmployeeID = null");
-                        }
-                        Console.WriteLine("ℹ️ User đã tồn tại, bỏ qua.");
-                    }
-
-                    Console.WriteLine("🎉 Seed data hoàn tất!");
+                    context.Roles.AddRange(roles);
+                    await context.SaveChangesAsync();
                 }
-                catch (Exception ex)
+
+                if (!context.Users.Any())
                 {
-                    Console.WriteLine($"❌ Lỗi khi seed data: {ex.Message}");
-                    Console.WriteLine($"Chi tiết: {ex.InnerException?.Message}");
+                    var superAdmin = new User
+                    {
+                        Username = "superadmin",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+                        IsActive = true,
+                        CreatedDate = DateTime.Now
+                    };
+
+                    context.Users.Add(superAdmin);
+                    await context.SaveChangesAsync();
+
+                    var role = context.Roles.First(r => r.RoleCode == "SUPER_ADMIN");
+
+                    context.UserRoles.Add(new UserRoles
+                    {
+                        UserID = superAdmin.UserID,
+                        RoleID = role.RoleID
+                    });
+
+                    await context.SaveChangesAsync();
+
+                    Console.WriteLine("✅ Super Admin created: superadmin / 123456");
                 }
             }
 
@@ -380,10 +253,10 @@ namespace LotusTeam
                     Path.Combine(Directory.GetCurrentDirectory(), "Uploads")),
                 RequestPath = "/Uploads"
             });
+
             app.UseHttpsRedirection();
             app.UseCors("AllowAll");
 
-            // ⚠️ THỨ TỰ BẮT BUỘC
             app.UseAuthentication();
             app.UseAuthorization();
 
