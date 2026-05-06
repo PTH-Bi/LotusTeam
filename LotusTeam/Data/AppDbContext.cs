@@ -39,11 +39,11 @@ namespace LotusTeam.Data
 
         public DbSet<Bonus> Bonuses { get; set; }
 
-        public DbSet<Deduction> Deductions { get; set; }
+        public DbSet<Deductions> Deductions { get; set; }
 
         public DbSet<Dependent> Dependents { get; set; }
 
-        public DbSet<DependentAllowance> DependentAllowances { get; set; }
+        public DbSet<DependentAllowances> DependentAllowances { get; set; }
 
         public DbSet<RemoteAttendances> RemoteAttendances { get; set; }
 
@@ -167,7 +167,7 @@ namespace LotusTeam.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            modelBuilder.Entity<DependentAllowance>(entity =>
+            modelBuilder.Entity<DependentAllowances>(entity =>
             {
                 entity.HasKey(e => e.DependentAllowanceID);
                 entity.Property(e => e.AmountPerDependent).HasPrecision(18, 2);
@@ -196,7 +196,7 @@ namespace LotusTeam.Data
                 entity.HasOne(e => e.Payroll).WithMany(p => p.Bonuses).HasForeignKey(e => e.PayrollID);
             });
 
-            modelBuilder.Entity<Deduction>(entity =>
+            modelBuilder.Entity<Deductions>(entity =>
             {
                 entity.HasKey(e => e.DeductionID);
                 entity.Property(e => e.Amount).HasPrecision(18, 2);

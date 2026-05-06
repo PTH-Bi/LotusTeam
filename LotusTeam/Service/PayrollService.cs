@@ -720,9 +720,9 @@ namespace LotusTeam.Services
         //====================================================
         // QUẢN LÝ KHẤU TRỪ
         //====================================================
-        public async Task<Deduction> AddDeductionAsync(int employeeId, DateTime month, string deductionName, decimal amount, string? note = null)
+        public async Task<Deductions> AddDeductionAsync(int employeeId, DateTime month, string deductionName, decimal amount, string? note = null)
         {
-            var deduction = new Deduction
+            var deduction = new Deductions
             {
                 EmployeeID = employeeId,
                 Month = new DateTime(month.Year, month.Month, 1),
@@ -737,7 +737,7 @@ namespace LotusTeam.Services
             return deduction;
         }
 
-        public async Task<List<Deduction>> GetDeductionsByMonthAsync(int employeeId, DateTime month)
+        public async Task<List<Deductions>> GetDeductionsByMonthAsync(int employeeId, DateTime month)
         {
             return await _context.Deductions
                 .Where(d => d.EmployeeID == employeeId &&
@@ -806,7 +806,7 @@ namespace LotusTeam.Services
         //====================================================
         // PHỤ CẤP THÂN NHÂN
         //====================================================
-        public async Task<DependentAllowance?> CalculateDependentAllowanceAsync(int employeeId, DateTime month, decimal amountPerDependent = 500000)
+        public async Task<DependentAllowances?> CalculateDependentAllowanceAsync(int employeeId, DateTime month, decimal amountPerDependent = 500000)
         {
             var dependentCount = await GetActiveDependentCountAsync(employeeId, month);
 
@@ -830,7 +830,7 @@ namespace LotusTeam.Services
                 return existing;
             }
 
-            var allowance = new DependentAllowance
+            var allowance = new DependentAllowances
             {
                 EmployeeID = employeeId,
                 Month = startOfMonth,
@@ -847,10 +847,10 @@ namespace LotusTeam.Services
             return allowance;
         }
 
-        public async Task<List<DependentAllowance>> CreateDependentAllowancesForAllAsync(DateTime month, decimal amountPerDependent = 500000)
+        public async Task<List<DependentAllowances>> CreateDependentAllowancesForAllAsync(DateTime month, decimal amountPerDependent = 500000)
         {
             var employees = await _context.Employees.Where(e => e.Status == 1).ToListAsync();
-            var allowances = new List<DependentAllowance>();
+            var allowances = new List<DependentAllowances>();
 
             foreach (var emp in employees)
             {
@@ -862,7 +862,7 @@ namespace LotusTeam.Services
             return allowances;
         }
 
-        public async Task<DependentAllowance?> GetDependentAllowanceByMonthAsync(int employeeId, DateTime month)
+        public async Task<DependentAllowances?> GetDependentAllowanceByMonthAsync(int employeeId, DateTime month)
         {
             var startOfMonth = new DateTime(month.Year, month.Month, 1);
             return await _context.DependentAllowances

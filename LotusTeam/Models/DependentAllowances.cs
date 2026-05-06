@@ -1,6 +1,6 @@
 ﻿namespace LotusTeam.Models
 {
-    public class DependentAllowance
+    public class DependentAllowances
     {
         public int DependentAllowanceID { get; set; }
         public int EmployeeID { get; set; }

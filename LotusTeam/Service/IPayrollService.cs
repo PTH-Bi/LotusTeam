@@ -24,12 +24,12 @@ namespace LotusTeam.Service
         // Quản lý phụ cấp, thưởng, khấu trừ
         Task<Allowances> AddAllowanceAsync(int employeeId, DateTime month, string allowanceName, decimal amount, string? note = null);
         Task<Bonus> AddBonusAsync(int employeeId, DateTime month, string bonusName, decimal amount, string? reason = null);
-        Task<Deduction> AddDeductionAsync(int employeeId, DateTime month, string deductionName, decimal amount, string? note = null);
+        Task<Deductions> AddDeductionAsync(int employeeId, DateTime month, string deductionName, decimal amount, string? note = null);
 
         // Lấy danh sách
         Task<List<Allowances>> GetAllowancesByMonthAsync(int employeeId, DateTime month);
         Task<List<Bonus>> GetBonusesByMonthAsync(int employeeId, DateTime month);
-        Task<List<Deduction>> GetDeductionsByMonthAsync(int employeeId, DateTime month);
+        Task<List<Deductions>> GetDeductionsByMonthAsync(int employeeId, DateTime month);
 
         // Quản lý người phụ thuộc
         Task<Dependent> AddDependentAsync(int employeeId, string fullName, string relationship, DateTime birthDate, string? identityNumber = null);
@@ -38,8 +38,8 @@ namespace LotusTeam.Service
         Task<int> GetActiveDependentCountAsync(int employeeId, DateTime month);
 
         // Phụ cấp thân nhân
-        Task<DependentAllowance?> CalculateDependentAllowanceAsync(int employeeId, DateTime month, decimal amountPerDependent = 500000);
-        Task<List<DependentAllowance>> CreateDependentAllowancesForAllAsync(DateTime month, decimal amountPerDependent = 500000);
-        Task<DependentAllowance?> GetDependentAllowanceByMonthAsync(int employeeId, DateTime month);
+        Task<DependentAllowances?> CalculateDependentAllowanceAsync(int employeeId, DateTime month, decimal amountPerDependent = 500000);
+        Task<List<DependentAllowances>> CreateDependentAllowancesForAllAsync(DateTime month, decimal amountPerDependent = 500000);
+        Task<DependentAllowances?> GetDependentAllowanceByMonthAsync(int employeeId, DateTime month);
     }
 }

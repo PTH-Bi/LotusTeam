@@ -30,8 +30,8 @@ namespace LotusTeam.Models
         // Navigation properties
         public virtual ICollection<Allowances> Allowances { get; set; }
         public virtual ICollection<Bonus> Bonuses { get; set; }
-        public virtual ICollection<Deduction> Deductions { get; set; }
-        public virtual ICollection<DependentAllowance> DependentAllowances { get; set; }
+        public virtual ICollection<Deductions> Deductions { get; set; }
+        public virtual ICollection<DependentAllowances> DependentAllowances { get; set; }
 
 
     }

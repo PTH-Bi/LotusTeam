@@ -650,7 +650,7 @@ namespace LotusTeam.Controllers
             try
             {
                 var result = await _service.AddDeductionAsync(employeeId, month, name, amount, note);
-                return Ok(new ApiResponse<Deduction>
+                return Ok(new ApiResponse<Deductions>
                 {
                     Success = true,
                     Message = "Thêm khấu trừ thành công",
@@ -683,7 +683,7 @@ namespace LotusTeam.Controllers
             }
 
             var result = await _service.GetDeductionsByMonthAsync(employeeId, month);
-            return Ok(new ApiResponse<List<Deduction>>
+            return Ok(new ApiResponse<List<Deductions>>
             {
                 Success = true,
                 Message = "Lấy danh sách khấu trừ thành công",
@@ -796,7 +796,7 @@ namespace LotusTeam.Controllers
             try
             {
                 var result = await _service.CalculateDependentAllowanceAsync(employeeId, month, amountPerDependent);
-                return Ok(new ApiResponse<DependentAllowance?>
+                return Ok(new ApiResponse<DependentAllowances?>
                 {
                     Success = true,
                     Message = result == null ? "Không có người phụ thuộc nào đang active" : "Tính phụ cấp thân nhân thành công",
@@ -822,7 +822,7 @@ namespace LotusTeam.Controllers
             try
             {
                 var result = await _service.CreateDependentAllowancesForAllAsync(month, amountPerDependent);
-                return Ok(new ApiResponse<List<DependentAllowance>>
+                return Ok(new ApiResponse<List<DependentAllowances>>
                 {
                     Success = true,
                     Message = "Tính phụ cấp thân nhân cho tất cả nhân viên thành công",
@@ -861,7 +861,7 @@ namespace LotusTeam.Controllers
             }
 
             var result = await _service.GetDependentAllowanceByMonthAsync(employeeId, month);
-            return Ok(new ApiResponse<DependentAllowance?>
+            return Ok(new ApiResponse<DependentAllowances?>
             {
                 Success = true,
                 Message = result == null ? "Không có phụ cấp thân nhân cho tháng này" : "Lấy phụ cấp thân nhân thành công",
