@@ -54,7 +54,7 @@ public class BankPartnersController : ControllerBase
 
     // ================= CREATE =================
     [HttpPost]
-    [Authorize(Roles = "SUPER_ADMIN,FINANCE_MANAGER,ACCOUNTANT")]
+    [Authorize(Roles = "ADMIN,SUPER_ADMIN,FINANCE_MANAGER,ACCOUNTANT")]
     public async Task<ActionResult<ApiResponse<BankPartnerDto>>> Create([FromBody] CreateBankPartnerDto dto)
     {
         var bank = await _service.CreateAsync(dto);

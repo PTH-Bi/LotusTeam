@@ -9,7 +9,6 @@ using System.Security.Claims;
 using LotusTeam.Service;
 using Microsoft.AspNetCore.Identity;
 
-
 namespace LotusTeam.API.Controllers
 {
     [Route("api/[controller]")]
@@ -34,7 +33,7 @@ namespace LotusTeam.API.Controllers
         #region Reference Data
 
         [HttpGet("genders")]
-        [AllowAnonymous] // Hoặc giữ nguyên quyền truy cập
+        [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<IEnumerable<GenderDto>>>> GetGenders()
         {
             try
@@ -74,7 +73,6 @@ namespace LotusTeam.API.Controllers
             try
             {
                 var departments = await _context.Departments
-                    // Bỏ dòng Where(d => d.IsActive) nếu chưa có
                     .OrderBy(d => d.DepartmentName)
                     .Select(d => new DepartmentInfoDto
                     {
@@ -110,7 +108,6 @@ namespace LotusTeam.API.Controllers
             try
             {
                 var positions = await _context.Positions
-                    // Bỏ dòng Where(p => p.IsActive) nếu chưa có
                     .OrderBy(p => p.PositionName)
                     .Select(p => new PositionInfoDto
                     {
@@ -163,13 +160,11 @@ namespace LotusTeam.API.Controllers
                     .Include(e => e.Gender)
                     .AsQueryable();
 
-                // Nếu là Manager hoặc Team Leader, chỉ xem nhân viên trong phòng của họ
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 var currentUserId = GetCurrentUserId();
 
                 if (currentUserRole == "MANAGER" || currentUserRole == "TEAM_LEADER")
                 {
-                    // Lấy thông tin user hiện tại
                     var currentUser = await _context.Users
                         .Include(u => u.Employee)
                         .FirstOrDefaultAsync(u => u.UserID == currentUserId);
@@ -192,34 +187,22 @@ namespace LotusTeam.API.Controllers
                 }
 
                 if (departmentId.HasValue)
-                {
                     query = query.Where(e => e.DepartmentID == departmentId);
-                }
 
                 if (positionId.HasValue)
-                {
                     query = query.Where(e => e.PositionID == positionId);
-                }
 
                 if (status.HasValue)
-                {
                     query = query.Where(e => e.Status == status);
-                }
 
                 if (hireDateFrom.HasValue)
-                {
                     query = query.Where(e => e.HireDate >= hireDateFrom);
-                }
 
                 if (hireDateTo.HasValue)
-                {
                     query = query.Where(e => e.HireDate <= hireDateTo);
-                }
 
-                // Get total count
                 var totalCount = await query.CountAsync();
 
-                // Apply pagination
                 var employees = await query
                     .OrderByDescending(e => e.EmployeeID)
                     .Skip((page - 1) * pageSize)
@@ -290,7 +273,6 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Kiểm tra quyền xem thông tin nhân viên
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 var currentUserId = GetCurrentUserId();
 
@@ -300,7 +282,6 @@ namespace LotusTeam.API.Controllers
                         .Include(u => u.Employee)
                         .FirstOrDefaultAsync(u => u.UserID == currentUserId);
 
-                    // Manager chỉ xem được nhân viên cùng phòng
                     if (currentUser?.Employee?.DepartmentID != employee.DepartmentID)
                     {
                         return Forbid();
@@ -308,7 +289,6 @@ namespace LotusTeam.API.Controllers
                 }
                 else if (currentUserRole == "EMPLOYEE" || currentUserRole == "INTERN" || currentUserRole == "PROBATION_STAFF")
                 {
-                    // Nhân viên chỉ xem được thông tin của chính mình
                     var currentUser = await _context.Users
                         .FirstOrDefaultAsync(u => u.UserID == currentUserId);
 
@@ -318,7 +298,6 @@ namespace LotusTeam.API.Controllers
                     }
                 }
 
-                // Get current contract
                 var currentContract = await _context.Contracts
                     .Include(c => c.ContractType)
                     .Where(c => c.EmployeeID == id &&
@@ -386,7 +365,6 @@ namespace LotusTeam.API.Controllers
         [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER,HR_STAFF")]
         public async Task<ActionResult<ApiResponse<object>>> CreateEmployee(CreateEmployeeDto createDto)
         {
-            // Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
@@ -397,7 +375,7 @@ namespace LotusTeam.API.Controllers
                 _logger.LogInformation("CreateUserAccount: {CreateUserAccount}", createDto.CreateUserAccount);
                 _logger.LogInformation("Username: {Username}", createDto.Username);
 
-                // ===== VALIDATION =====
+                // Validation
                 if (!await IsValidDepartment(createDto.DepartmentId))
                 {
                     return BadRequest(new ApiResponse<object>
@@ -434,7 +412,6 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // 🔥 Bắt buộc có số điện thoại nếu tạo tài khoản
                 if (createDto.CreateUserAccount && string.IsNullOrEmpty(createDto.Phone))
                 {
                     return BadRequest(new ApiResponse<object>
@@ -444,7 +421,7 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // ===== CHECK TRÙNG =====
+                // Check duplicates
                 var existingEmployee = await _context.Employees
                     .FirstOrDefaultAsync(e => e.EmployeeCode == createDto.EmployeeCode);
 
@@ -472,7 +449,6 @@ namespace LotusTeam.API.Controllers
                     }
                 }
 
-                // Check số điện thoại trùng
                 if (!string.IsNullOrEmpty(createDto.Phone))
                 {
                     var existingPhone = await _context.Employees
@@ -488,7 +464,7 @@ namespace LotusTeam.API.Controllers
                     }
                 }
 
-                // ===== CREATE EMPLOYEE =====
+                // Create employee
                 var employee = new Employees
                 {
                     EmployeeCode = createDto.EmployeeCode,
@@ -519,14 +495,14 @@ namespace LotusTeam.API.Controllers
 
                 _logger.LogInformation("✅ Employee created with ID: {EmployeeId}", employee.EmployeeID);
 
-                // ===== CONTRACT =====
+                // Create contract if provided
                 if (createDto.InitialContract != null)
                 {
                     await CreateInitialContract(employee.EmployeeID, createDto.InitialContract);
                     _logger.LogInformation("✅ Contract created for employee {EmployeeId}", employee.EmployeeID);
                 }
 
-                // ===== CREATE USER ACCOUNT =====
+                // Create user account if requested
                 string? defaultPassword = null;
                 bool userAccountCreated = false;
 
@@ -543,7 +519,6 @@ namespace LotusTeam.API.Controllers
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "❌ Failed to create user account for employee {EmployeeId}", employee.EmployeeID);
-                        // Rollback transaction nếu tạo user thất bại
                         await transaction.RollbackAsync();
                         return StatusCode(500, new ApiResponse<object>
                         {
@@ -552,12 +527,7 @@ namespace LotusTeam.API.Controllers
                         });
                     }
                 }
-                else
-                {
-                    _logger.LogWarning("⚠️ CreateUserAccount is FALSE for employee {EmployeeId}", employee.EmployeeID);
-                }
 
-                // Commit transaction nếu mọi thứ thành công
                 await transaction.CommitAsync();
                 _logger.LogInformation("✅ Transaction committed successfully");
 
@@ -588,102 +558,6 @@ namespace LotusTeam.API.Controllers
             }
         }
 
-        private async Task<string> CreateUserAccount(Employees EMPLOYEE, string? usernameInput)
-        {
-            _logger.LogInformation("CreateUserAccount started - EmployeeID: {EmployeeId}, Phone: {Phone}",
-                EMPLOYEE.EmployeeID, EMPLOYEE.Phone);
-
-            // Validate
-            if (string.IsNullOrEmpty(EMPLOYEE.Phone))
-            {
-                throw new InvalidOperationException("Nhân viên chưa có số điện thoại, không thể tạo tài khoản");
-            }
-
-            // Tạo username
-            string username = !string.IsNullOrEmpty(usernameInput)
-                ? usernameInput
-                : (!string.IsNullOrEmpty(EMPLOYEE.Email)
-                    ? EMPLOYEE.Email
-                    : EMPLOYEE.EmployeeCode);
-
-            _logger.LogInformation("Generated username: {Username}", username);
-
-            // Check username exists
-            var existingUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == username);
-
-            if (existingUser != null)
-            {
-                throw new InvalidOperationException($"Username '{username}' đã tồn tại trong hệ thống");
-            }
-
-            // Check employee already has user account
-            var existingUserForEmployee = await _context.Users
-                .FirstOrDefaultAsync(u => u.EmployeeID == EMPLOYEE.EmployeeID);
-
-            if (existingUserForEmployee != null)
-            {
-                throw new InvalidOperationException($"Nhân viên {EMPLOYEE.EmployeeCode} đã có tài khoản");
-            }
-
-            // Tạo user account
-            var defaultPassword = EMPLOYEE.Phone;
-            var passwordHasher = new PasswordHasher<User>();
-
-            var user = new User
-            {
-                Username = username,
-                EmployeeID = EMPLOYEE.EmployeeID,
-                IsActive = true,
-                CreatedDate = DateTime.Now,
-                // Nếu có các field khác
-                BankAccountNumber = null,
-                BankName = null,
-                BankBranch = null
-            };
-
-            user.PasswordHash = passwordHasher.HashPassword(user, defaultPassword);
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("User created with ID: {UserId}, Username: {Username}", user.UserID, username);
-
-            // Gán role Employee
-            await AssignDefaultRole(user.UserID);
-            _logger.LogInformation("Role assigned to user {UserId}", user.UserID);
-
-            return defaultPassword;
-        }
-
-        private async Task AssignDefaultRole(int userId)
-        {
-            var role = await _context.Roles
-                .FirstOrDefaultAsync(r => r.RoleName == "EMPLOYEE");
-
-            if (role == null)
-            {
-                _logger.LogWarning("Role 'EMPLOYEE' not found, skipping role assignment");
-                return;
-            }
-
-            // Check if already assigned
-            var existingUserRole = await _context.UserRoles
-                .FirstOrDefaultAsync(ur => ur.UserID == userId && ur.RoleID == role.RoleID);
-
-            if (existingUserRole == null)
-            {
-                var userRole = new UserRoles
-                {
-                    UserID = userId,
-                    RoleID = role.RoleID
-                };
-
-                _context.UserRoles.Add(userRole);
-                await _context.SaveChangesAsync();
-            }
-        }
-
         [HttpPut("{id}")]
         [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER,HR_STAFF,MANAGER")]
         public async Task<ActionResult<ApiResponse<EmployeeDetailDto>>> UpdateEmployee(
@@ -702,7 +576,6 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Kiểm tra quyền update
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 var currentUserId = GetCurrentUserId();
 
@@ -712,18 +585,15 @@ namespace LotusTeam.API.Controllers
                         .Include(u => u.Employee)
                         .FirstOrDefaultAsync(u => u.UserID == currentUserId);
 
-                    // Manager chỉ update được nhân viên cùng phòng
                     if (currentUser?.Employee?.DepartmentID != employee.DepartmentID)
                     {
                         return Forbid();
                     }
 
-                    // Manager không được sửa lương
                     updateDto.BaseSalary = null;
                 }
                 else if (currentUserRole == "EMPLOYEE" || currentUserRole == "INTERN" || currentUserRole == "PROBATION_STAFF")
                 {
-                    // Nhân viên chỉ update được thông tin cá nhân của chính mình
                     var currentUser = await _context.Users
                         .FirstOrDefaultAsync(u => u.UserID == currentUserId);
 
@@ -732,7 +602,6 @@ namespace LotusTeam.API.Controllers
                         return Forbid();
                     }
 
-                    // Nhân viên chỉ được sửa một số trường cơ bản
                     updateDto.BaseSalary = null;
                     updateDto.Status = null;
                     updateDto.DepartmentId = null;
@@ -758,7 +627,7 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Check if new email exists
+                // Check email duplicate
                 if (!string.IsNullOrEmpty(updateDto.Email) && updateDto.Email != employee.Email)
                 {
                     var existingEmail = await _context.Employees
@@ -774,16 +643,15 @@ namespace LotusTeam.API.Controllers
                     }
                 }
 
-                // Store old values for history
                 var oldDepartmentId = employee.DepartmentID;
                 var oldPositionId = employee.PositionID;
 
-                // Update Employee
+                // Update fields
                 if (!string.IsNullOrEmpty(updateDto.FullName))
                     employee.FullName = updateDto.FullName;
 
                 if (updateDto.GenderId.HasValue)
-                    employee.GenderID = (byte?)updateDto.GenderId; // Cast sang byte?
+                    employee.GenderID = updateDto.GenderId;
 
                 if (updateDto.DateOfBirth.HasValue)
                     employee.DateOfBirth = updateDto.DateOfBirth.Value;
@@ -881,10 +749,8 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Update employee status
-                employee.Status = 0; // Terminated
+                employee.Status = 0;
 
-                // Terminate active contracts
                 var activeContracts = employee.Contracts
                     .Where(c => c.EndDate == null || c.EndDate >= DateTime.Today)
                     .ToList();
@@ -929,7 +795,6 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Kiểm tra quyền: chỉ nhân viên đó hoặc HR mới được upload avatar
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 var currentUserId = GetCurrentUserId();
 
@@ -953,7 +818,6 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Validate file type
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 if (!allowedExtensions.Contains(extension))
@@ -965,7 +829,6 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Validate file size (max 5MB)
                 if (file.Length > 5 * 1024 * 1024)
                 {
                     return BadRequest(new ApiResponse<object>
@@ -975,27 +838,22 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Create uploads directory if not exists
                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);
                 }
 
-                // Generate unique filename
                 var fileName = $"avatar_{id}_{Guid.NewGuid()}{extension}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
 
-                // Save file
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await file.CopyToAsync(stream);
                 }
 
-                // Update employee record
                 var relativePath = $"/uploads/avatars/{fileName}";
 
-                // Delete old avatar if exists
                 if (!string.IsNullOrEmpty(employee.AvatarPath))
                 {
                     var oldFilePath = Path.Combine(_environment.WebRootPath, employee.AvatarPath.TrimStart('/'));
@@ -1051,14 +909,12 @@ namespace LotusTeam.API.Controllers
                     });
                 }
 
-                // Delete file
                 var filePath = Path.Combine(_environment.WebRootPath, employee.AvatarPath.TrimStart('/'));
                 if (System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
                 }
 
-                // Update database
                 employee.AvatarPath = null;
                 await _context.SaveChangesAsync();
 
@@ -1075,6 +931,59 @@ namespace LotusTeam.API.Controllers
                 {
                     Success = false,
                     Message = "Đã xảy ra lỗi khi xóa ảnh đại diện"
+                });
+            }
+        }
+
+        [HttpPost("{id}/reset-password")]
+        [Authorize(Roles = "SUPER_ADMIN,ADMIN,HR_MANAGER")]
+        public async Task<ActionResult<ApiResponse<object>>> ResetPassword(int id)
+        {
+            try
+            {
+                var employee = await _context.Employees.FindAsync(id);
+                if (employee == null)
+                {
+                    return NotFound(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Nhân viên không tồn tại"
+                    });
+                }
+
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.EmployeeID == id);
+
+                if (user == null)
+                {
+                    return NotFound(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Message = "Tài khoản chưa được tạo"
+                    });
+                }
+
+                // Reset password to phone number
+                string newPassword = employee.Phone ?? "12345678";
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Password reset for employee {EmployeeId}", id);
+
+                return Ok(new ApiResponse<object>
+                {
+                    Success = true,
+                    Data = new { NewPassword = newPassword },
+                    Message = $"Đã reset mật khẩu thành công. Mật khẩu mới: {newPassword}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password for employee {Id}", id);
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Lỗi khi reset mật khẩu"
                 });
             }
         }
@@ -1112,40 +1021,117 @@ namespace LotusTeam.API.Controllers
             await _context.SaveChangesAsync();
         }
 
-        private async Task CreateUserAccount(int employeeId, string username, string password)
+        private async Task<string> CreateUserAccount(Employees employee, string? usernameInput)
         {
-            // Check if username already exists
+            _logger.LogInformation("=== CREATE USER ACCOUNT START ===");
+            _logger.LogInformation("EmployeeID: {EmployeeId}", employee.EmployeeID);
+            _logger.LogInformation("EmployeeCode: {EmployeeCode}", employee.EmployeeCode);
+            _logger.LogInformation("Phone: {Phone}", employee.Phone);
+
+            // Validation
+            if (string.IsNullOrEmpty(employee.Phone))
+            {
+                throw new InvalidOperationException("Nhân viên chưa có số điện thoại, không thể tạo tài khoản");
+            }
+
+            // Check if employee already has account
+            var existingUserForEmployee = await _context.Users
+                .FirstOrDefaultAsync(u => u.EmployeeID == employee.EmployeeID);
+
+            if (existingUserForEmployee != null)
+            {
+                throw new InvalidOperationException($"Nhân viên {employee.EmployeeCode} đã có tài khoản");
+            }
+
+            // Generate username
+            string username = GenerateUsername(usernameInput, employee.Email, employee.EmployeeCode);
+            _logger.LogInformation("Generated username: {Username}", username);
+
+            // Check if username exists
             var existingUser = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == username);
 
             if (existingUser != null)
             {
-                throw new Exception($"Tên đăng nhập '{username}' đã tồn tại");
+                throw new InvalidOperationException($"Username '{username}' đã tồn tại trong hệ thống");
             }
+
+            // Create user with BCrypt password
+            var defaultPassword = employee.Phone;
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(defaultPassword);
+            _logger.LogInformation("Password hashed with BCrypt");
 
             var user = new User
             {
-                EmployeeID = employeeId,
                 Username = username,
-                PasswordHash = HashPassword(password),
+                EmployeeID = employee.EmployeeID,
+                PasswordHash = hashedPassword,
                 IsActive = true,
-                CreatedDate = DateTime.Now
+                CreatedDate = DateTime.Now,
+                LastLogin = null
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ User created with ID: {UserId}", user.UserID);
 
-            // Assign default employee role
-            var employeeRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleCode == "EMPLOYEE");
-            if (employeeRole != null)
+            // Assign default role
+            await AssignDefaultRole(user.UserID);
+            _logger.LogInformation("✅ Role assigned to user {UserId}", user.UserID);
+
+            _logger.LogInformation("=== CREATE USER ACCOUNT SUCCESS ===");
+            _logger.LogInformation("Username: {Username}, Default Password: {Password}", username, defaultPassword);
+
+            return defaultPassword;
+        }
+
+        private string GenerateUsername(string? usernameInput, string? email, string employeeCode)
+        {
+            if (!string.IsNullOrWhiteSpace(usernameInput))
             {
-                var userRole = new UserRoles
+                return usernameInput.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var parts = email.Split('@');
+                return parts[0].Trim();
+            }
+
+            return employeeCode.Trim();
+        }
+
+        private async Task AssignDefaultRole(int userId)
+        {
+            try
+            {
+                var role = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.RoleCode == "EMPLOYEE" || r.RoleName == "EMPLOYEE");
+
+                if (role == null)
                 {
-                    UserID = user.UserID,
-                    RoleID = employeeRole.RoleID
-                };
-                _context.UserRoles.Add(userRole);
-                await _context.SaveChangesAsync();
+                    _logger.LogWarning("Role 'EMPLOYEE' not found");
+                    return;
+                }
+
+                var existing = await _context.UserRoles
+                    .FirstOrDefaultAsync(ur => ur.UserID == userId && ur.RoleID == role.RoleID);
+
+                if (existing == null)
+                {
+                    var userRole = new UserRoles
+                    {
+                        UserID = userId,
+                        RoleID = role.RoleID
+                    };
+                    _context.UserRoles.Add(userRole);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Role EMPLOYEE assigned to user {UserId}", userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning role to user {UserId}", userId);
             }
         }
 
@@ -1157,17 +1143,15 @@ namespace LotusTeam.API.Controllers
 
             if (departmentChanged || positionChanged)
             {
-                // End previous job history if exists
                 var previousHistory = await _context.JobHistories
                     .Where(jh => jh.EmployeeID == employeeId && jh.EndDate == null)
                     .FirstOrDefaultAsync();
 
                 if (previousHistory != null)
                 {
-                    previousHistory.EndDate = DateTime.Now.AddDays(-1); // End yesterday
+                    previousHistory.EndDate = DateTime.Now.AddDays(-1);
                 }
 
-                // Create new job history
                 var jobHistory = new JobHistory
                 {
                     EmployeeID = employeeId,
@@ -1199,11 +1183,6 @@ namespace LotusTeam.API.Controllers
             var date = DateTime.Now.ToString("yyyyMMdd");
             var random = new Random().Next(1000, 9999);
             return $"HD-{date}-{random}";
-        }
-
-        private string HashPassword(string password)
-        {
-            return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
         private int? GetCurrentUserId()
@@ -1243,12 +1222,11 @@ namespace LotusTeam.API.Controllers
         public int EmployeeId { get; set; }
         public string EmployeeCode { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
-        public byte? GenderId { get; set; } // Sửa thành byte?
+        public byte? GenderId { get; set; }
         public string GenderName { get; set; } = string.Empty;
         public DateTime? DateOfBirth { get; set; }
         public int? DepartmentId { get; set; }
         public int? BankPartnerID { get; set; }
-
         public string? BankAccountName { get; set; }
         public string DepartmentName { get; set; } = string.Empty;
         public int? PositionId { get; set; }
@@ -1303,48 +1281,34 @@ namespace LotusTeam.API.Controllers
         [EmailAddress]
         public string? Email { get; set; }
 
-        // 🔥 BẮT BUỘC nếu tạo account
         [Phone]
         public string? Phone { get; set; }
 
         public string? Address { get; set; }
-
-        // 👉 nên dùng int để đồng bộ DB
         public int? MaritalStatus { get; set; }
-
         public string? IdentityNumber { get; set; }
         public string? BankAccount { get; set; }
         public string? TaxCode { get; set; }
-
         public string? EmergencyContactName { get; set; }
         public string? EmergencyContactPhone { get; set; }
-
         public InitialContractDto? InitialContract { get; set; }
-
         public bool CreateUserAccount { get; set; } = false;
-
         public string? Username { get; set; }
-
-        // ❌ XOÁ HOÀN TOÀN
-        // public string? Password { get; set; }
     }
 
     public class UpdateEmployeeDto
     {
         [StringLength(100)]
         public string? FullName { get; set; }
-        public byte? GenderId { get; set; } // Sửa thành byte?
+        public byte? GenderId { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public int? DepartmentId { get; set; }
         public int? PositionId { get; set; }
         public int? BankPartnerID { get; set; }
-
         public string? BankAccountName { get; set; }
         public decimal? BaseSalary { get; set; }
-
         [EmailAddress]
         public string? Email { get; set; }
-
         [Phone]
         public string? Phone { get; set; }
         public string? Address { get; set; }
@@ -1395,7 +1359,6 @@ namespace LotusTeam.API.Controllers
         public string GenderName { get; set; } = string.Empty;
     }
 
-    // Đổi tên PositionDto thành PositionInfoDto để tránh xung đột với model Position
     public class PositionInfoDto
     {
         public int PositionId { get; set; }
@@ -1404,7 +1367,6 @@ namespace LotusTeam.API.Controllers
         public string? Description { get; set; }
     }
 
-    // Đổi tên DepartmentDto thành DepartmentInfoDto
     public class DepartmentInfoDto
     {
         public int DepartmentId { get; set; }
